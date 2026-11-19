@@ -164,7 +164,7 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 </div>
 <p class="compact muted" style="margin:8px 0 0">이 페이지를 클릭한 상태에서 <kbd>F2</kbd> = 한 번 캡처, <kbd>F3</kbd> = 방금 추가한 장비 취소. 스크린샷을 붙여넣어도 돼요.</p>
 <details class="settings"><summary>스캔 설정</summary>
-<div class="row compact" style="margin-top:8px"><label>툴팁 언어 <select id="ocrLang"><option value="eng">영어 (GMS)</option><option value="kor">한국어 (KMS)</option></select></label><label>부위를 못 읽으면 <select id="slotFallback"><option value="entry">장비 등록란에서 고른 부위로 추가</option><option value="ask">추가하지 말고 직접 고르기</option></select></label></div>
+<div class="row compact" style="margin-top:8px"><label>부위를 못 읽으면 <select id="slotFallback"><option value="entry">장비 등록란에서 고른 부위로 추가</option><option value="ask">추가하지 말고 직접 고르기</option></select></label></div>
 <div class="row compact"><label><input type="checkbox" id="only3"> 스킬 장비는 3줄만 추가 (1~2줄이어도 소켓 3개가 맞으면 소켓 장비로 남김)</label><label><input type="checkbox" id="skipDup"> 이미 등록된 같은 장비는 건너뛰기</label><label><input type="checkbox" id="sound"> 소리 알림</label><label>볼륨 <input type="range" id="volume" min="0" max="100" step="5" style="width:110px;padding:0;vertical-align:middle"> <span id="volumeText"></span></label><button type="button" id="testOk">딩동 듣기</button><button type="button" id="testBad">삐삐 듣기</button></div>
 <div class="row compact"><span class="muted">이 스킬이 하나라도 있으면 스킬 장비로 안 씀 (소켓 장비 판정은 그대로):</span><span id="junkSkills" class="row" style="gap:8px"></span></div>
 <div class="row compact"><label><input type="checkbox" id="sockRule"> 소켓 조건 사용</label><span class="muted">소켓 3개가 모두 이 색이면 남김:</span><span id="sockColors"></span></div>
@@ -531,8 +531,8 @@ let prefs={lang:'eng',fallback:'entry',only3:true,skipDup:true,sound:true,sockRu
 const JOB_KO={warrior:'전사',mage:'마법사',bowman:'궁수',thief:'도적',pirate:'해적'};
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(prefsKey)||'{}'));}catch(e){}
 function savePrefs(){try{localStorage.setItem(prefsKey,JSON.stringify(prefs));}catch(e){}}
-$('ocrLang').value=prefs.lang;$('slotFallback').value=prefs.fallback;
-$('ocrLang').onchange=()=>{prefs.lang=$('ocrLang').value;savePrefs();};
+// 툴팁 언어는 영어(GMS) 고정 (예전에 한국어로 바꿔 둔 설정도 영어로 되돌림)
+prefs.lang='eng';$('slotFallback').value=prefs.fallback;
 $('slotFallback').onchange=()=>{prefs.fallback=$('slotFallback').value;savePrefs();};
 for(const id of ['only3','skipDup','sound']){$(id).checked=prefs[id];$(id).onchange=()=>{prefs[id]=$(id).checked;savePrefs();};}
 
