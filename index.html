@@ -189,8 +189,8 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 </section>
 
 <section class="card" id="sockPanel" style="margin-bottom:14px">
-<div class="row spread"><h2>최적 소켓 조합 <span id="sockTotal" class="muted"></span></h2><label class="compact">내 직업군 <select id="myJob"></select></label></div>
-<p class="muted compact">공략 기준: <b>흰색(무지개)+2색 4부위 · 3색 2부위</b>. 한 장비 안에서는 색을 섞을수록 좋아요(빨빨빨보다 빨검초). 스킬은 같은 부위 소켓 장비로 전승되므로 소켓 장비의 스킬 줄은 상관없고, 소켓 장비는 내 직업군이어야 해요. 자동 스캔 때 조건에 맞는 소켓 장비는 여기에 자동으로 들어와요.</p>
+<div class="row spread"><h2>최적 소켓 조합 <span id="sockTotal" class="muted"></span></h2><label class="compact">주 스탯 <select id="myStat"></select></label></div>
+<p class="muted compact">공략 기준: <b>흰색(무지개)+2색 4부위 · 3색 2부위</b>. 한 장비 안에서는 색을 섞을수록 좋아요(빨빨빨보다 빨검초). 스킬은 같은 부위 소켓 장비로 전승되므로 소켓 장비의 스킬 줄은 상관없고, 소켓 장비는 내 주 스탯을 쓰는 직업군 장비여야 해요(STR 전사·해적, DEX 궁수·해적, INT 마법사, LUK 도적). 자동 스캔 때 조건에 맞는 소켓 장비는 여기에 자동으로 들어와요.</p>
 <div id="sockResult"></div>
 <div class="row compact" style="margin:10px 0 4px">직접 추가 <select id="sockSlot"></select><select id="sockC1"></select><select id="sockC2"></select><select id="sockC3"></select><button id="sockAdd" type="button">추가</button></div>
 <div id="sockList"></div>
@@ -527,9 +527,16 @@ const skillPatterns=[
  ['damage',/damage|데미지/]
 ];
 const prefsKey='quanah-capture-prefs';
-let prefs={lang:'eng',fallback:'entry',only3:true,skipDup:true,sound:true,sockRule:true,sockColors:['red','gray','green','prismatic'],myJob:'warrior',volume:90,invXOnly:false,junkSkills:['boss','damage','ied']};
+let prefs={lang:'eng',fallback:'entry',only3:true,skipDup:true,sound:true,sockRule:true,sockColors:['red','gray','green','prismatic'],myJob:'warrior',myStat:'',volume:90,invXOnly:false,junkSkills:['boss','damage','ied']};
 const JOB_KO={warrior:'전사',mage:'마법사',bowman:'궁수',thief:'도적',pirate:'해적'};
+// 주 스탯 기준: 소켓 장비는 그 스탯을 쓰는 직업군 장비여야 함 (해적은 STR·DEX 둘 다)
+const STAT_KO={str:'STR',dex:'DEX',int:'INT',luk:'LUK'};
+const STAT_JOBS={str:['warrior','pirate'],dex:['bowman','pirate'],int:['mage'],luk:['thief']};
+const STAT_COLORS={str:['red','gray','green'],dex:['red','gray','green','purple'],int:['blue'],luk:['purple','gray']};
+// 예전 '내 직업군' 설정 → 주 스탯으로 옮김 (전사 STR, 마법사 INT, 궁수 DEX, 도적 LUK, 해적 STR)
+const jobFitsStat=job=>!job||(STAT_JOBS[prefs.myStat]||[]).includes(job);
 try{Object.assign(prefs,JSON.parse(localStorage.getItem(prefsKey)||'{}'));}catch(e){}
+if(!STAT_KO[prefs.myStat])prefs.myStat={warrior:'str',mage:'int',bowman:'dex',thief:'luk',pirate:'str'}[prefs.myJob]||'str';
 function savePrefs(){try{localStorage.setItem(prefsKey,JSON.stringify(prefs));}catch(e){}}
 // 툴팁 언어는 영어(GMS) 고정 (예전에 한국어로 바꿔 둔 설정도 영어로 되돌림)
 prefs.lang='eng';$('slotFallback').value=prefs.fallback;
@@ -1280,7 +1287,7 @@ function junkOf(ids,names=[]){
 // 스킬 장비(3줄)와 소켓 장비(내 직업군 + 쓸 수 있는 색 소켓 3개)는 따로 판정한다. 공략: 스킬은 같은 부위 소켓 장비로 전승하므로 둘 중 하나만 맞아도 남김.
 function sockOk(g){
  if(!prefs.sockRule||!g.sockets||g.sockets.length!==3)return false;
- if(g.job&&g.job!==prefs.myJob)return false;
+ if(!jobFitsStat(g.job))return false;
  return g.sockets.every(s=>prefs.sockColors.includes(s));
 }
 function judge(g){
@@ -1296,7 +1303,7 @@ function judge(g){
  if(prefs.sockRule&&!g.sockets)return {v:'?',why:n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')+' · 소켓 인식 실패',skill,sock};
  const r=[n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')];
  if(prefs.sockRule&&g.sockets){
-  if(g.job&&g.job!==prefs.myJob)r.push(JOB_KO[g.job]+' 장비');
+  if(!jobFitsStat(g.job))r.push(JOB_KO[g.job]+' 장비 ('+STAT_KO[prefs.myStat]+'로 못 씀)');
   else if(g.sockets.length<3)r.push('소켓 '+g.sockets.length+'개');
   else r.push('소켓 '+sockText(g.sockets));
  }
@@ -1326,7 +1333,7 @@ function sockChips(s){
  for(const c of s){const b=el('span',SOCK_SHORT[c]||c,'chip');b.title=SOCK_KO[c];b.style.cssText='background:'+SOCK_CSS[c]+';color:'+(c==='prismatic'?'#222':'#fff')+';border-color:transparent;font-weight:700';w.append(b);}
  return w;
 }
-const sockValid=s=>s.sockets.length===3&&s.sockets.every(c=>prefs.sockColors.includes(c))&&(!s.job||s.job===prefs.myJob);
+const sockValid=s=>s.sockets.length===3&&s.sockets.every(c=>prefs.sockColors.includes(c))&&jobFitsStat(s.job);
 // 장비 하나의 평가: 흰색은 장비당 1개까지만 의미(공략: 흰+2색), 나머지는 색이 다를수록 좋음
 function sockLocal(s){
  const prism=s.sockets.filter(c=>c==='prismatic').length,rest=s.sockets.filter(c=>c!=='prismatic');
@@ -1413,16 +1420,15 @@ function renderSockets(){
   list.append(g);
  }
 }
-$('myJob').replaceChildren(...Object.entries(JOB_KO).map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
-$('myJob').value=prefs.myJob;
-$('myJob').onchange=()=>{prefs.myJob=$('myJob').value;
- // 직업군별 쓸 수 있는 색 (공략 정리): 전사 빨·검·초 / 마법사 파 / 도적 보·검 / 궁수 파 제외 4색 / 해적은 공략에 없음 → 그대로
- const map={warrior:['red','gray','green'],mage:['blue'],thief:['purple','gray'],bowman:['red','gray','green','purple']};
- if(map[prefs.myJob])prefs.sockColors=['prismatic',...map[prefs.myJob]];
+$('myStat').replaceChildren(...Object.entries(STAT_KO).map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
+$('myStat').value=prefs.myStat;
+$('myStat').onchange=()=>{prefs.myStat=$('myStat').value;
+ // 스탯별 쓸 수 있는 소켓 색 (공략): STR 빨·검·초 / DEX 파랑 빼고 전부 / INT 파 / LUK 보·검 (+ 흰색은 공통)
+ prefs.sockColors=['prismatic',...STAT_COLORS[prefs.myStat]];
  savePrefs();renderSockPrefs();renderSockets();};
 $('sockSlot').replaceChildren(...SLOT_ORDER.map(i=>{const o=el('option',slots[i]);o.value=i;return o;}));
 for(const id of ['sockC1','sockC2','sockC3'])$(id).replaceChildren(...SOCK_ALL.map(c=>{const o=el('option',SOCK_KO[c]);o.value=c;return o;}));
-$('sockAdd').onclick=()=>{state.sock.push({id:uid(),slot:+$('sockSlot').value,sockets:[$('sockC1').value,$('sockC2').value,$('sockC3').value],job:prefs.myJob,name:'직접 추가'});refresh();};
+$('sockAdd').onclick=()=>{state.sock.push({id:uid(),slot:+$('sockSlot').value,sockets:[$('sockC1').value,$('sockC2').value,$('sockC3').value],job:null,name:'직접 추가'});refresh();};
 // 색 설정을 바꾸면 조합도 다시 계산
 $('sockColors').addEventListener('change',()=>renderSockets());
 renderSockets();
