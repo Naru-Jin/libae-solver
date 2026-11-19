@@ -1,0 +1,1718 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>리베 장비 계산기</title>
+<meta name="description" content="메이플스토리 콰나 리베 슈퍼차지 장비 18줄 조합 · 소켓 조합 계산기 (툴팁 자동 인식)">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%238f9dff'/><stop offset='1' stop-color='%235ee0f0'/></linearGradient></defs><path d='M32 4 56 14v16c0 15-10 26-24 30C18 56 8 45 8 30V14z' fill='url(%23g)'/><path d='M32 18l4 9 10 1-8 6 3 10-9-6-9 6 3-10-8-6 10-1z' fill='%230b1024'/></svg>">
+<style>
+:root{color-scheme:dark;--bg:#131313;--panel:#181818;--line:#2c2c2c;--muted:#a0a0a0;--accent:#eaeaea;--gold:#dfb66a}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#1c1a17,#131313 45%);color:#f4f4f4;font:14px/1.5 "Malgun Gothic",system-ui,sans-serif}
+.topbar{height:55px;display:flex;gap:10px;align-items:center;padding:0 max(18px,calc((100vw - 1130px)/2));position:sticky;top:0;z-index:2;background:repeating-linear-gradient(0deg,#ffffff04 0px,#ffffff01 2px,#0000000d 3px,#00000000 5px),linear-gradient(#2e2520,#201c19);border-bottom:1px solid #554638;font-weight:750}.topbar span{font-size:22px}
+main{width:min(1130px,calc(100% - 32px));margin:20px auto 48px}
+header{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:26px;letter-spacing:-.045em;margin:0 0 5px}h1 span{margin-right:4px}h2{font-size:17px;margin:0 0 8px}h3{font-size:14px;margin:0}p{margin:6px 0 10px}.compact{font-size:12px}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:"entry result" "inventory result" "inventory goals";align-items:start;gap:14px}
+.grid>section:first-child{grid-area:entry}.grid>section:nth-child(2){grid-area:inventory}#solution{grid-area:result}#myGoals{grid-area:goals}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 22px}
+.row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.spread{justify-content:space-between}
+select{font:inherit;color:inherit;background:#1b263d;border:1px solid #364564;border-radius:7px;padding:5px 7px}
+button,input{font:inherit;color:inherit;background:#242424;border:1px solid #363636;border-radius:7px;padding:6px 9px}button{cursor:pointer;font-weight:650}button:hover{border-color:#9e9e9e}button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}button.primary,.slots button.active{background:#e9e9e9;border-color:#e9e9e9;color:#252525}button.active{border-color:#bcbcbc}
+.slots{display:grid;grid-template-columns:repeat(2,96px);gap:5px;margin:10px 0 14px}.slots button{display:flex;justify-content:space-between;font-size:13px}.slots button span{opacity:.72}
+.opts{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr) minmax(0,1.16fr);gap:8px;max-width:450px;margin-bottom:12px}
+.option-group{display:grid;gap:5px;align-content:start}
+[data-skill]{--tone:#aaa;--border:#3b3b3b;--tint:#202020}
+[data-skill=leap]{--tone:#a892ff;--border:#483873;--tint:#201a30}
+[data-skill=registry]{--tone:#76cbb3;--border:#2d5d51;--tint:#182923}
+[data-skill=crit]{--tone:#f48cba;--border:#713950;--tint:#2d1c25}
+[data-skill=atk]{--tone:#f29191;--border:#713838;--tint:#2c1d1d}
+[data-skill=warrior],[data-skill=mage],[data-skill=bowman],[data-skill=thief],[data-skill=pirate]{--tone:#e1b76d;--border:#66502b;--tint:#2c2518}
+.opts button{display:flex;align-items:center;justify-content:space-between;gap:5px;text-align:left;min-height:35px;padding:5px 8px;font-size:12px;border-radius:5px;border-color:var(--border);background:var(--tint)}
+.option-dot{width:13px;height:13px;border:1px solid var(--border);border-radius:50%;flex:none}.opts button:hover,.opts button.active{border-color:var(--tone)}.opts button.active .option-dot{border-color:var(--tone);background:var(--tone)}
+.selected-lines{margin-bottom:9px}.chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0}.chip{border:1px solid #363636;border-radius:5px;color:#d6d6d6;padding:1px 6px;font-size:11px}
+.list{display:grid;gap:5px;margin-top:7px}.entry{background:#202020;border:1px solid #333;border-radius:6px;padding:6px 8px;margin-top:5px}.entry button{font-size:12px}
+.inventory-group{padding-top:8px;margin-bottom:8px}.inventory-group .muted{margin-top:2px}
+.metric{font-size:32px;line-height:1.2;font-weight:850;letter-spacing:-.05em}progress{width:100%;height:7px;accent-color:var(--gold)}
+.goal-meter{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin:11px 0}.goal-row{gap:4px;color:var(--gold);font-weight:700;font-size:12px}.goal-boxes{display:inline-flex;gap:3px;flex:none}.goal-boxes i{width:9px;height:9px;border:1px solid var(--tone);border-radius:2px}.goal-boxes .filled{background:var(--tone)}
+.skillgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:5px}.skillgrid label{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:12px}.skillgrid input{width:48px;padding:4px}.preset{padding:7px 0;border-bottom:1px solid var(--line)}.preset p{margin:3px 0}
+#notice,#presetStatus{color:var(--gold);font-size:12px;margin:5px 0 0}#notice:empty,#presetStatus:empty{display:none}details summary{cursor:pointer}details[open] summary{margin-bottom:8px}footer{margin-top:16px;text-align:center}a{color:#c8c8c8}
+@media(max-width:800px){.grid{grid-template-columns:1fr;grid-template-areas:"entry" "result" "inventory" "goals"}}@media(max-width:420px){.card{padding:13px}.opts{gap:5px}.opts button{padding:5px}.option-dot{width:9px;height:9px}}
+
+#capturePanel{margin-bottom:14px}.capture-preview{display:table;position:relative;max-width:100%}#captureCanvas{display:block;width:auto;max-width:100%;max-height:480px;touch-action:none;cursor:crosshair}#captureRegion{position:absolute;border:2px solid #e5bd70;background:#e5bd7020;pointer-events:none}#invCanvas{display:block;max-width:100%;max-height:520px;cursor:crosshair;touch-action:none}#invMap{cursor:pointer}#sockColors{display:inline-flex;gap:8px;flex-wrap:wrap}
+#readOptions{white-space:pre-wrap;color:var(--gold)}#captureFile{max-width:230px}kbd{color:var(--gold)}
+body{background:#0b1020;color:#eef2ff}.topbar{display:none}main{max-width:1100px;margin-top:30px}
+.card{background:#141b2d;border-color:#293550;border-radius:12px}.entry{background:#101729;border-color:#28344e}
+header h1{letter-spacing:-.035em}.muted{color:#a9b4ca}
+button,input{background:#1b263d;border-color:#364564}button.primary,.slots button.active{background:#91a6ff;border-color:#91a6ff;color:#111930}
+.goal-row{color:#d9e2ff}.goal-boxes i{border-color:var(--tone)}#capturePanel{margin-top:14px}
+#inventory{display:grid;gap:6px;grid-template-columns:repeat(2,minmax(0,1fr))}.inventory-group{border-top:1px solid #293550}
+@media(max-width:480px){#inventory{grid-template-columns:1fr}}
+[data-skill=white]{--tone:#65b9ed;--border:#345776;--tint:#172e43}
+.chip[data-skill]{display:inline-flex;align-items:center;gap:5px;background:var(--tint);border-color:var(--border);color:#eef2ff}
+.chip[data-skill]::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--tone);flex:none}
+@media(min-width:801px){.grid{grid-template-areas:"entry result" "inventory result" "inventory goals"}}
+
+/* ===== 디자인 다듬기 (배경·카드·버튼·타이포) ===== */
+:root{--ink:#e9edff;--muted:#9aa6c4;--accent:#8f9dff;--accent2:#5ee0f0;--card:rgba(16,22,40,.74);--edge:rgba(143,157,255,.16);--edge2:rgba(143,157,255,.28);--field:rgba(26,35,62,.78)}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{font-family:"Pretendard Variable",Pretendard,"Malgun Gothic",system-ui,sans-serif;color:var(--ink);letter-spacing:-.01em;
+ background:#070b18;background-image:
+  radial-gradient(1100px 620px at 8% -12%,rgba(124,92,255,.26),transparent 62%),
+  radial-gradient(900px 520px at 104% 6%,rgba(56,189,248,.16),transparent 60%),
+  radial-gradient(900px 700px at 50% 118%,rgba(236,72,153,.12),transparent 60%);
+ background-attachment:fixed;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+ background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.2px);background-size:24px 24px;
+ -webkit-mask-image:linear-gradient(#000,transparent 75%);mask-image:linear-gradient(#000,transparent 75%)}
+main{position:relative;z-index:1;width:min(1160px,calc(100% - 32px));max-width:none;margin:28px auto 56px}
+.muted{color:var(--muted)}
+/* 상단 소개 */
+.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:stretch;margin-bottom:18px}
+.hero-text{padding:6px 2px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.04em;color:#c9d0ff;background:rgba(143,157,255,.12);border:1px solid var(--edge2);border-radius:999px;padding:3px 10px;margin-bottom:10px}
+.hero h1{font-size:clamp(28px,4vw,40px);font-weight:850;letter-spacing:-.04em;margin:0 0 8px;
+ background:linear-gradient(100deg,#fff 10%,#c7ceff 45%,#7fe8f5 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:15px;color:#c3cbe6;margin:0 0 14px}.lead b{color:#fff}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+.hero-side{background:var(--card);border:1px solid var(--edge);border-radius:18px;padding:14px 16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.side-title{font-size:12px;font-weight:800;color:#c9d0ff;letter-spacing:.04em;margin-bottom:8px}
+/* 카드 */
+.card{background:var(--card);border:1px solid var(--edge);border-radius:18px;padding:18px 22px;
+ box-shadow:0 12px 32px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.grid{gap:16px}
+#capturePanel,#sockPanel{margin:0 0 16px}
+h2{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;letter-spacing:-.03em;margin:0 0 10px}
+h2::before{content:'';flex:none;width:4px;height:18px;border-radius:3px;background:linear-gradient(var(--accent),var(--accent2))}
+h3{font-size:14px;font-weight:750;color:#dfe4ff}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.card-head h2{margin-bottom:6px}
+.tag{font-size:11px;font-weight:700;color:#9fefff;background:rgba(94,224,240,.1);border:1px solid rgba(94,224,240,.3);border-radius:999px;padding:2px 9px}
+.sub-head{margin-top:16px;padding-top:12px;border-top:1px solid var(--edge);font-weight:750;font-size:13px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+/* 스캔 안내 단계 */
+.steps{list-style:none;counter-reset:s;margin:4px 0 12px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.steps li{counter-increment:s;position:relative;background:rgba(10,15,30,.45);border:1px solid var(--edge);border-radius:12px;padding:10px 12px 10px 40px;font-size:13px;color:#c3cbe6;line-height:1.45}
+.steps li::before{content:counter(s);position:absolute;left:11px;top:10px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#0b1024;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.steps b{color:#fff}
+.actions{gap:8px}.file-pick{margin-left:auto;color:var(--muted)}
+details.settings{margin:12px 0 4px;border:1px solid var(--edge);border-radius:12px;background:rgba(10,15,30,.4);padding:8px 12px}
+details.settings>summary{font-weight:750;font-size:13px;color:#dfe4ff;list-style:none}
+details.settings>summary::-webkit-details-marker{display:none}
+details.settings>summary::before{content:'▸';display:inline-block;margin-right:6px;color:var(--accent);transition:transform .15s}
+details.settings[open]>summary::before{transform:rotate(90deg)}
+details.settings .row{margin:6px 0}
+#captureStatus{margin:12px 0 6px;padding:9px 12px;border-radius:12px;background:rgba(94,224,240,.07);border:1px solid rgba(94,224,240,.24);color:#d6f6ff;font-size:13px}
+#scanLogBox{background:rgba(10,15,30,.4);border:1px solid var(--edge);border-radius:12px;padding:8px 12px}
+/* 입력·버튼 */
+button,input,select{font:inherit;color:inherit;background:var(--field);border:1px solid var(--edge2);border-radius:10px;padding:7px 11px;transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+button{font-weight:700}
+button:hover:not(:disabled){border-color:var(--accent);background:rgba(40,52,92,.85);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.42;cursor:not-allowed}
+button.primary,.slots button.active{background:linear-gradient(135deg,#a3aeff,#7584ff);border-color:transparent;color:#0b1024;box-shadow:0 6px 18px rgba(117,132,255,.35)}
+button.primary:hover:not(:disabled){background:linear-gradient(135deg,#b4bdff,#8593ff)}
+select{background:var(--field);padding:6px 9px}
+input[type=checkbox],input[type=radio],input[type=range],progress{accent-color:var(--accent)}
+input[type=checkbox]{width:15px;height:15px;padding:0;vertical-align:-2px}
+label{color:#d3d9f2}
+kbd{font:700 12px/1 ui-monospace,Consolas,monospace;color:#fff;background:rgba(143,157,255,.18);border:1px solid var(--edge2);border-bottom-width:2px;border-radius:6px;padding:2px 6px}
+:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+/* 목록·결과 */
+.entry{background:rgba(10,15,30,.5);border:1px solid var(--edge);border-radius:12px;padding:8px 10px}
+.inventory-group{border-top:1px solid var(--edge)}
+.chip{border-radius:7px}
+.metric{background:linear-gradient(100deg,#fff,#9fefff);-webkit-background-clip:text;background-clip:text;color:transparent}
+progress{height:8px;border-radius:99px;overflow:hidden}
+footer{margin-top:22px}footer a{color:#b9c2ff}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(143,157,255,.25);border-radius:99px}::-webkit-scrollbar-track{background:transparent}
+@media(min-width:801px){.grid{grid-template-areas:"entry result" "inventory goals"}#myGoals{align-self:start}}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.steps{grid-template-columns:1fr}.file-pick{margin-left:0}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="topbar"><span aria-hidden="true">🍄</span> Quanah</div>
+<main>
+<header class="hero">
+<div class="hero-text">
+<div class="eyebrow">MapleStory · Quanah · Libae's Supercharged</div>
+<h1>리베 장비 계산기</h1>
+<p class="lead">툴팁을 자동으로 읽어서 <b>18줄 스킬 조합</b>과 <b>소켓 조합</b>을 한 번에 맞춰요.</p>
+<div class="hero-actions"><button type="button" class="primary" onclick="document.getElementById('capturePanel').scrollIntoView({behavior:'smooth'})">스캔 시작하기</button><button type="button" onclick="document.getElementById('sockPanel').scrollIntoView({behavior:'smooth'})">소켓 조합 보기</button><button type="button" onclick="document.getElementById('solution').scrollIntoView({behavior:'smooth'})">18줄 조합 보기</button></div>
+</div>
+<div class="hero-side">
+<div class="side-title">데이터 관리</div>
+<div class="row"><button id="autoBackup" title="고른 폴더에 장비 목록이 바뀔 때마다 자동으로 저장해요">자동 백업 폴더 선택</button><button id="export">백업 내보내기</button><button id="import">백업 불러오기</button><input type="file" id="backup" accept=".json,application/json" hidden></div>
+<span id="autoBackupStatus" class="muted compact"></span>
+<p class="compact muted" style="margin:6px 0 0">장비 목록은 이 브라우저에만 저장돼요. 다른 기기로 옮길 땐 백업을 쓰세요.</p>
+</div>
+</header>
+<section class="card" id="capturePanel">
+<div class="card-head"><h2>게임 툴팁 스캔</h2><span class="tag">GMS 영어 툴팁</span></div>
+<noscript><p style="color:#ff8a8a;font-weight:700">이 창에서는 스크립트가 꺼져 있어 아무 기능도 동작하지 않아요. 파일을 크롬이나 엣지로 직접 여세요.</p></noscript>
+<p id="envWarn" style="color:#ff8a8a;font-weight:700" hidden></p>
+<ol class="steps">
+<li><b>게임 창 공유</b>를 누르고 MapleStory 창을 고르세요.</li>
+<li><b>자동 스캔 시작</b>을 누르고 게임으로 돌아가세요.</li>
+<li>장비에 마우스를 <b>2~3초</b> 올려 두면 읽고 판정해요. 딩동 = 남김, 삐삐 = 분해.</li>
+</ol>
+<div class="row actions">
+<button id="startShare">게임 창 공유</button><button id="autoScan" class="primary" disabled>자동 스캔 시작</button><button id="takeFrame" disabled>한 번 캡처 · F2</button><button id="endShare" disabled>공유 중지</button>
+<label class="compact file-pick">이미지 파일 <input id="captureFile" type="file" accept="image/*"></label>
+</div>
+<p class="compact muted" style="margin:8px 0 0">이 페이지를 클릭한 상태에서 <kbd>F2</kbd> = 한 번 캡처, <kbd>F3</kbd> = 방금 추가한 장비 취소. 스크린샷을 붙여넣어도 돼요.</p>
+<details class="settings"><summary>스캔 설정</summary>
+<div class="row compact" style="margin-top:8px"><label>툴팁 언어 <select id="ocrLang"><option value="eng">영어 (GMS)</option><option value="kor">한국어 (KMS)</option></select></label><label>부위를 못 읽으면 <select id="slotFallback"><option value="entry">장비 등록란에서 고른 부위로 추가</option><option value="ask">추가하지 말고 직접 고르기</option></select></label></div>
+<div class="row compact"><label><input type="checkbox" id="only3"> 스킬 장비는 3줄만 추가 (1~2줄이어도 소켓 3개가 맞으면 소켓 장비로 남김)</label><label><input type="checkbox" id="skipDup"> 이미 등록된 같은 장비는 건너뛰기</label><label><input type="checkbox" id="sound"> 소리 알림</label><label>볼륨 <input type="range" id="volume" min="0" max="100" step="5" style="width:110px;padding:0;vertical-align:middle"> <span id="volumeText"></span></label><button type="button" id="testOk">딩동 듣기</button><button type="button" id="testBad">삐삐 듣기</button></div>
+<div class="row compact"><span class="muted">이 스킬이 하나라도 있으면 스킬 장비로 안 씀 (소켓 장비 판정은 그대로):</span><span id="junkSkills" class="row" style="gap:8px"></span></div>
+<div class="row compact"><label><input type="checkbox" id="sockRule"> 소켓 조건 사용</label><span class="muted">소켓 3개가 모두 이 색이면 남김:</span><span id="sockColors"></span></div>
+</details>
+<p id="captureStatus" class="compact muted" role="status">이미지를 붙여넣어도 됩니다. 처음 인식할 때 인터넷이 필요합니다.</p>
+<details id="scanLogBox" class="compact" open hidden><summary>스캔 기록 <span id="scanCount" class="muted"></span></summary><ol id="scanLog" style="margin:4px 0 8px;padding-left:20px;max-height:180px;overflow:auto"></ol></details>
+<div class="sub-head">인벤토리 O/X 표시 <span class="muted compact">인벤토리를 한 번 찍어 두면 스캔한 장비 칸에 남김/분해가 표시돼요</span></div>
+<div class="row compact" style="margin-top:6px"><button id="invShot" disabled>인벤토리 찍기</button><button id="invXOnly" hidden>분해할 칸만 보기</button><button id="invClear" hidden>O/X 지우기</button><button id="invRemove" hidden>인벤토리 삭제</button><span id="invStatus" class="muted"></span></div>
+<div id="invSetup" hidden>
+<p class="compact muted">장비 칸 영역(맨 왼쪽 위 칸의 왼쪽 위 모서리 ~ 맨 오른쪽 아래 칸의 오른쪽 아래 모서리)을 드래그하고, 가로·세로 칸 수를 맞춰 격자가 칸과 겹치면 저장하세요. 찍을 때 마우스는 인벤토리 밖에 두세요.</p>
+<canvas id="invCanvas"></canvas>
+<div class="row compact" style="margin-top:6px"><label>가로 칸 <input id="invCols" type="number" min="1" max="40" value="4" style="width:60px"></label><label>세로 칸 <input id="invRows" type="number" min="1" max="40" value="8" style="width:60px"></label><button id="invSave" class="primary">저장</button><button id="invCancel">취소</button></div>
+</div>
+<div id="invView" hidden><canvas id="invMap" style="display:block;max-width:100%"></canvas><p id="invXList" class="compact" style="color:#ff8a8a;font-weight:700"></p><p id="invHelp" class="compact muted">O = 남김 · X = 분해 · ? = 소켓 확인 필요. 칸을 클릭하면 O → X → 비움 순으로 바꿀 수 있어요.</p></div>
+<div id="captureReview" hidden>
+<div class="capture-preview"><canvas id="captureCanvas" aria-label="캡처 이미지. 드래그해서 인식 영역 선택"></canvas><div id="captureRegion" hidden></div></div>
+<p class="muted compact">인식이 잘 안 되면 이미지에서 왼쪽 툴팁만 드래그한 뒤 다시 읽으세요.</p>
+<div class="row"><button id="readRegion">선택 영역 다시 읽기</button><button id="useCapture" class="primary" disabled>장비 등록란에 채우기</button></div>
+<pre id="readOptions" class="compact"></pre>
+<details id="rawDetails" class="compact"><summary>인식된 원문 보기 (문제 신고용)</summary><pre id="rawText" class="compact muted" style="white-space:pre-wrap;max-height:300px;overflow:auto"></pre></details>
+</div>
+</section>
+
+<section class="card" id="sockPanel" style="margin-bottom:14px">
+<div class="row spread"><h2>최적 소켓 조합 <span id="sockTotal" class="muted"></span></h2><label class="compact">내 직업군 <select id="myJob"></select></label></div>
+<p class="muted compact">공략 기준: <b>흰색(무지개)+2색 4부위 · 3색 2부위</b>. 한 장비 안에서는 색을 섞을수록 좋아요(빨빨빨보다 빨검초). 스킬은 같은 부위 소켓 장비로 전승되므로 소켓 장비의 스킬 줄은 상관없고, 소켓 장비는 내 직업군이어야 해요. 자동 스캔 때 조건에 맞는 소켓 장비는 여기에 자동으로 들어와요.</p>
+<div id="sockResult"></div>
+<div class="row compact" style="margin:10px 0 4px">직접 추가 <select id="sockSlot"></select><select id="sockC1"></select><select id="sockC2"></select><select id="sockC3"></select><button id="sockAdd" type="button">추가</button></div>
+<div id="sockList"></div>
+</section>
+<div class="grid">
+<section class="card">
+<h2 id="entryTitle">장비 등록</h2>
+<div id="entrySlots" class="row slots"></div>
+<div class="muted compact">장비에 붙은 옵션을 최대 3줄 선택하세요. 목표 외 옵션은 ‘기타’로 입력할 수 있어요.</div>
+<div id="options" class="opts"></div>
+<div id="selectedLines" class="row selected-lines"></div>
+<div class="row spread"><div class="row"><label>스타포스 <input id="stars" type="number" min="0" max="30" value="0" style="width:65px"> ★</label><input id="gearName" maxlength="80" placeholder="장비 이름 · 선택" aria-label="장비 이름"></div><div class="row"><button id="cancel" hidden>취소</button><button id="saveGear" class="primary">장비 추가</button></div></div>
+<p id="notice" role="status"></p>
+</section>
+<section class="card">
+<div class="row spread"><h2>보유 장비 · Your 3L Gear <span id="total" class="muted"></span></h2><div class="row"><button id="junkGear" type="button" title="보스 데미지·데미지·방어율 무시 등 필요 없는 스킬이 붙은 장비 지우기">필요 없는 스킬 정리</button><button id="dedupeGear" type="button">중복 정리</button><button id="pruneGear" type="button" disabled>선택 장비 외 모두 삭제</button></div></div>
+<div id="inventory"></div>
+</section>
+<section class="card" id="solution">
+<div class="row spread"><h2>최적 조합 · Best Set</h2><button id="solve" class="primary">조합 계산</button></div>
+<div id="result" aria-live="polite"></div>
+</section>
+<section class="card" id="myGoals">
+<h2>내 목표</h2>
+<div id="presets"></div>
+<details id="editor" style="margin-top:10px"><summary>목표 추가 · 편집</summary>
+<p class="muted compact">옵션마다 원하는 줄 수를 0~3으로 지정하세요. 총 18줄까지 설정할 수 있어요.</p>
+<div class="row" style="margin-bottom:10px"><input id="presetName" placeholder="목표 이름" aria-label="목표 이름" maxlength="80"><input id="presetNote" placeholder="메모 · 선택" aria-label="목표 메모" maxlength="180"></div>
+<div id="targets" class="skillgrid"></div>
+<div class="row" style="margin-top:12px"><button id="useDraft">이 목표 적용</button><button id="savePreset" class="primary">내 목표로 저장</button></div>
+<p id="presetStatus" role="status" class="compact warn"></p>
+</details>
+</section>
+</div>
+<footer class="muted compact">참고 <a href="https://freehtmlhost.com/3l-set-solver/" target="_blank" rel="noopener">영어 원본 3L Set Solver</a> · <a href="https://www.nexon.com/maplestory/news/update/47132/v-272-maplayer-one-patch-notes" target="_blank" rel="noopener">GMS v.272 공지</a></footer>
+</main>
+<script>
+'use strict';
+const slots = ['모자','상의','하의','장갑','신발','망토'];
+const skills = [
+ ['leap','차원 도약','Dimensional Leap'],['white','화이트 홀','White Hole'],['registry','레지스트리','Registry'],
+ ['atk','공격력·마력','Attack Power & Magic ATT Enhancement'],['crit','크리티컬 데미지','Critical Damage Enhancement'],
+ ['warrior','전사','Warrior'],['mage','마법사','Magician'],['bowman','궁수','Bowman'],['thief','도적','Thief'],['pirate','해적','Pirate'],
+ ['boss','보스 데미지','Boss Damage Enhancement'],['damage','데미지','Damage Enhancement'],['ied','방어율 무시','Ignore Defense Enhancement']
+];
+const labels = Object.fromEntries(skills.map(([key,ko])=>[key,ko]));
+labels.other = '기타';
+const jobs = {warrior:1,mage:1,bowman:1,thief:1,pirate:1};
+const defaultGoal = {leap:3,white:3,registry:3,atk:3,...jobs,crit:1};
+const $ = id => document.getElementById(id);
+const key = 'quanah-libae-ko-v1';
+const uid = () => globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)+Date.now().toString(36);
+let state = {gear:[],custom:[],goal:defaultGoal,active:'',sock:[]};
+let capturedNames=[];
+let slot=0, selected=[], editing=null, editingPreset=null, run=0;
+function cleanGoal(value) {
+ const goal = Object.fromEntries(skills.flatMap(([id])=>Number.isInteger(value?.[id]) && value[id]>0 && value[id]<=3?[[id,value[id]]]:[]));
+ const total = Object.values(goal).reduce((a,b)=>a+b,0);
+ if(total<1 || total>18) throw Error('목표 옵션은 총 1~18줄이어야 합니다.');
+ return goal;
+}
+function cleanState(data) {
+ if(!Array.isArray(data?.gear)||!Array.isArray(data?.custom)) throw Error('올바른 계산기 백업 파일을 선택하세요.');
+ const gear=data.gear.map(g=>{
+  if(!Number.isInteger(g.slot)||!slots[g.slot]||!Array.isArray(g.lines)||g.lines.length>3||g.lines.some(l=>!Object.hasOwn(labels,l))||new Set(g.lines.filter(l=>l!=='other')).size!==g.lines.filter(l=>l!=='other').length||!Number.isInteger(g.stars)||g.stars<0||g.stars>30) throw Error('백업에 올바르지 않은 장비가 있습니다.');
+  return {id:uid(),slot:g.slot,lines:g.lines,stars:g.stars,name:String(g.name||'').slice(0,80),optionNames:Array.isArray(g.optionNames)?g.lines.map((_,i)=>String(g.optionNames[i]||'').slice(0,140)):[],sockets:Array.isArray(g.sockets)?g.sockets.slice(0,3).map(String):null,job:typeof g.job==='string'?g.job:null};
+ });
+ const custom=data.custom.map(p=>({id:uid(),oldId:p.id,name:String(p.name||'내 목표').slice(0,80),note:String(p.note||'').slice(0,180),goal:cleanGoal(p.goal)}));
+ const active=custom.find(p=>p.oldId===data.active)?.id || '';
+ const okColor=/^(red|gray|green|purple|blue|prismatic)$/;
+ const sock=(Array.isArray(data.sock)?data.sock:[]).filter(s=>Number.isInteger(s?.slot)&&slots[s.slot]&&Array.isArray(s.sockets)&&s.sockets.length===3&&s.sockets.every(c=>okColor.test(c)))
+  .map(s=>({id:uid(),slot:s.slot,sockets:s.sockets.slice(),job:typeof s.job==='string'?s.job:null,name:String(s.name||'').slice(0,80)}));
+ return {gear,custom,active,goal:cleanGoal(data.goal),sock};
+}
+try{const stored=localStorage.getItem(key);if(stored)state=cleanState(JSON.parse(stored));}catch(e){$('notice').textContent='저장 데이터를 읽지 못했습니다. 백업 파일이 있다면 불러오세요.';}
+function persist(){try{localStorage.setItem(key,JSON.stringify(state));}catch(e){$('notice').textContent='브라우저 저장을 사용할 수 없습니다. 백업을 내보내세요.';}window.queueAutoBackup?.();}
+function el(tag,txt,cls){const e=document.createElement(tag);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e;}
+function button(txt,fn,cls){const b=el('button',txt,cls);b.type='button';b.onclick=fn;return b;}
+function chips(lines,names=[]){const wrap=el('div',null,'chips');lines.forEach((line,i)=>{const chip=el('span',line==='other'&&names[i]?names[i]:labels[line],'chip');chip.dataset.skill=line;if(names[i])chip.title=names[i]+' +1';wrap.append(chip);});return wrap;}
+function renderEntry(){
+ $('entryTitle').textContent=editing?'장비 수정':'장비 등록';
+ $('saveGear').textContent=editing?'수정 저장':'장비 추가';
+ $('cancel').hidden=!editing;
+ $('entrySlots').replaceChildren(...[0,5,1,3,2,4].map(i=>{
+  const tab=button(slots[i],()=>{slot=i;renderEntry();},slot===i?'active':'');
+  tab.append(el('span',state.gear.filter(g=>g.slot===i).length));
+  return tab;
+ }));
+ $('selectedLines').replaceChildren(el('strong',slots[slot]),...Array.from({length:3},(_,i)=>el('span',selected[i]?labels[selected[i]]:'옵션 '+(i+1),'chip')));
+ const optionButtons = new Map([...skills,['other','기타']].map(([id,ko,en])=>{
+  const count=selected.filter(l=>l===id).length;
+  const b=button(ko+(count>1?' ×'+count:''),()=>{
+   if(id!=='other'&&count){const i=selected.indexOf(id);selected.splice(i,1);capturedNames.splice(i,1);}
+   else if(selected.length<3){selected.push(id);capturedNames.push("");}
+   else if(count){const i=selected.lastIndexOf(id);selected.splice(i,1);capturedNames.splice(i,1);}
+   else {$('notice').textContent='최대 3줄입니다. 선택한 옵션을 눌러 해제하세요.';return;}
+   renderEntry();
+  },count?'active':'');
+  b.title=en||'목표에 없는 줄. 같은 장비에 여러 줄을 입력할 수 있어요.';
+  b.dataset.skill=id;
+  b.setAttribute('aria-pressed',Boolean(count));
+  b.append(el('span',null,'option-dot'));
+  return [id,b];
+ }));
+ const columns=[['leap','white','registry'],['mage','pirate','thief','warrior','bowman'],['crit','atk','other','boss','damage','ied']];
+ $('options').replaceChildren(...columns.map(column=>{
+  const group=el('div',null,'option-group');
+  group.append(...column.map(id=>optionButtons.get(id)));
+  return group;
+ }));
+}
+function resetEntry(){selected=[];capturedNames=[];editing=null;$('stars').value=0;$('gearName').value='';renderEntry();}
+function refresh(){persist();renderEntry();renderInventory();renderPresets();calculate();if(typeof renderSockets==='function')renderSockets();}
+function renderInventory(){
+ $('total').textContent='('+state.gear.length+')';
+ const inventory=$('inventory');
+ inventory.replaceChildren();
+ for(const index of [0,5,1,3,2,4]){
+  const pieces=state.gear.filter(g=>g.slot===index).sort((a,b)=>b.stars-a.stars);
+  const group=el('section',null,'inventory-group');
+  const heading=el('div',null,'row spread');
+  heading.append(el('h3',slots[index]),el('span',pieces.length+'개','muted compact'));
+  group.append(heading);
+  if(!pieces.length)group.append(el('div','아직 없어요.','muted compact'));
+  for(const g of pieces){
+   const card=el('div',null,'entry row spread'), info=el('div');
+   info.append(el('strong',(g.name||slots[g.slot])+' · '+g.stars+'★'),chips(g.lines,g.optionNames));
+   const actions=el('div',null,'row');
+   actions.append(button('수정',()=>{editing=g.id;slot=g.slot;selected=[...g.lines];capturedNames=g.lines.map((_,i)=>g.optionNames?.[i]||"");$('stars').value=g.stars;$('gearName').value=g.name;renderEntry();$('entryTitle').scrollIntoView({block:'nearest'});}),button('삭제',()=>{
+    if(confirm('이 장비를 삭제할까요?')){
+     state.gear=state.gear.filter(x=>x.id!==g.id);
+     if(editing===g.id)resetEntry();
+     refresh();
+    }
+   }));
+   card.append(info,actions);group.append(card);
+  }
+  inventory.append(group);
+ }
+}
+$('saveGear').onclick=()=>{
+ const stars=$('stars').valueAsNumber;
+ if(!Number.isInteger(stars)||stars<0||stars>30){$('notice').textContent='스타포스는 0~30 사이 정수로 입력하세요.';return;}
+ const gear={id:editing||uid(),slot,lines:[...selected],optionNames:selected.map((_,i)=>capturedNames[i]||''),stars,name:$('gearName').value.trim()};
+ const junk=window.junkOf?junkOf(gear.lines,gear.optionNames):[];
+ if(junk.length){$('notice').textContent='필요 없는 스킬('+junk.join('·')+')이 있어서 보유 장비에 넣지 않았어요. (캡처 패널 설정에서 바꿀 수 있어요)';return;}
+ if(editing)state.gear=state.gear.map(g=>g.id===editing?gear:g);
+ else state.gear.push(gear);
+ const msg=editing?'장비를 수정했습니다.':'장비를 추가했습니다.';resetEntry();$('notice').textContent=msg;refresh();
+};
+$('cancel').onclick=resetEntry;
+function showDraft(p, edit=false){
+ editingPreset=edit?p.id:null;
+ $('presetName').value=edit?p.name:'';
+ $('presetNote').value=edit?p.note:'';
+ for(const [id] of skills)$('goal-'+id).value=p.goal[id]||0;
+ $('presetStatus').textContent='';
+}
+function renderPresets(){
+ $('presets').replaceChildren();
+ for(const p of state.custom){
+  const card=el('article',null,'preset'), head=el('div',null,'row spread'), actions=el('div',null,'row');
+  const apply=button(state.active===p.id?'적용 중':'적용',()=>{state.goal=p.goal;state.active=p.id;showDraft(p);refresh();},state.active===p.id?'active':'');
+  actions.append(apply);
+  actions.append(button('편집',()=>{showDraft(p,true);$('editor').open=true;}),button('삭제',()=>{
+   if(!confirm('이 목표를 삭제할까요?'))return;
+   state.custom=state.custom.filter(x=>x.id!==p.id);
+   if(state.active===p.id)state.active='';
+   if(editingPreset===p.id)showDraft(state);
+   refresh();
+  }));
+  head.append(el('strong',p.name),actions);
+  card.append(head,el('p',p.note,'muted compact'));
+  card.append(el('div',Object.entries(p.goal).map(([id,n])=>labels[id]+' '+n).join(' · '),'compact'));
+  $('presets').append(card);
+ }
+}
+for(const [id,ko,en] of skills){
+ const label=el('label',ko);label.title=en;
+ const input=el('input');input.type='number';input.min=0;input.max=3;input.id='goal-'+id;label.append(input);$('targets').append(label);
+}
+function draftGoal(){
+ const values=Object.fromEntries(skills.map(([id])=>[id,$('goal-'+id).value===''?0:$('goal-'+id).valueAsNumber]));
+ if(Object.values(values).some(n=>!Number.isInteger(n)||n<0||n>3))throw Error('각 옵션은 0~3 사이 정수로 입력하세요.');
+ return cleanGoal(values);
+}
+$('useDraft').onclick=()=>{try{state.goal=draftGoal();state.active='';$('presetStatus').textContent='입력한 목표를 적용했습니다.';refresh();}catch(e){$('presetStatus').textContent=e.message;}};
+$('savePreset').onclick=()=>{try{
+ const name=$('presetName').value.trim();if(!name)throw Error('목표 이름을 입력하세요.');
+ const p={id:editingPreset||uid(),name,note:$('presetNote').value.trim(),goal:draftGoal()};
+ const at=state.custom.findIndex(x=>x.id===p.id);
+ if(at<0)state.custom.push(p);else state.custom[at]=p;
+ state.active=p.id;state.goal=p.goal;showDraft(p);$('presetStatus').textContent='목표를 저장하고 적용했습니다.';refresh();
+}catch(e){$('presetStatus').textContent=e.message;}};
+$('export').onclick=()=>{
+ const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));
+ const a=el('a');a.href=url;a.download='quanah-libae-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+$('import').onclick=()=>$('backup').click();
+$('backup').onchange=async()=>{
+ const f=$('backup').files[0];$('backup').value='';if(!f)return;
+ try{const next=cleanState(JSON.parse(await f.text()));
+  if((state.gear.length||state.custom.length)&&!confirm('현재 장비와 내 목표을 백업 내용으로 교체할까요?'))return;
+  state=next;lastAutoAddedId=null;resetEntry();showDraft(state);$('notice').textContent='백업을 불러왔습니다.';refresh();
+ }catch(e){$('notice').textContent='불러오기 실패 · '+e.message;}
+};
+</script>
+<script>
+function solveGear(gear,goal){
+ const ids=Object.keys(goal),limits=ids.map(id=>goal[id]);
+ const buckets=Array.from({length:6},(_,slot)=>{
+  const best=new Map();
+  for(const item of gear.filter(g=>g.slot===slot)){
+   const hits=item.lines.map(l=>ids.indexOf(l)).filter(i=>i>=0).sort((a,b)=>a-b);
+   const key=hits.join(',');
+   if(!best.has(key)||item.stars>best.get(key).item.stars)best.set(key,{item,hits});
+  }
+  return {slot,choices:best.size?[...best.values()].sort((a,b)=>b.hits.length-a.hits.length||b.item.stars-a.item.stars):[{item:null,hits:[]}]};
+ }).sort((a,b)=>a.choices.length-b.choices.length);
+ const starsLeft=Array(7).fill(0), skillLeft=Array(7), linesLeft=Array(7).fill(0);
+ skillLeft[6]=ids.map(()=>0);
+ for(let d=5;d>=0;d--){
+  const choices=buckets[d].choices;
+  starsLeft[d]=starsLeft[d+1]+Math.max(...choices.map(c=>c.item?.stars||0));
+  linesLeft[d]=linesLeft[d+1]+Math.max(...choices.map(c=>c.hits.length));
+  skillLeft[d]=skillLeft[d+1].map((n,i)=>n+Number(choices.some(c=>c.hits.includes(i))));
+ }
+ const counts=ids.map(()=>0), path=Array(6), memo=Array.from({length:6},()=>new Map());
+ let best={score:-1,stars:-1};
+ function visit(d,score,stars){
+  let possible=0;
+  for(let i=0;i<ids.length;i++)possible+=Math.min(limits[i]-counts[i],skillLeft[d][i]);
+  const upper=score+Math.min(possible,linesLeft[d]);
+  if(upper<best.score||(upper===best.score&&stars+starsLeft[d]<=best.stars))return;
+  if(d===6){best={score,stars,items:path.slice(),counts:counts.slice()};return;}
+  const signature=counts.join('');
+  if((memo[d].get(signature)??-1)>=stars)return;
+  memo[d].set(signature,stars);
+  const bucket=buckets[d];
+  for(const {item,hits} of bucket.choices){
+   const added=hits.filter(i=>counts[i]<limits[i]);
+   for(const i of added)counts[i]++;
+   path[bucket.slot]=item;
+   visit(d+1,score+added.length,stars+(item?.stars||0));
+   for(const i of added)counts[i]--;
+  }
+ }
+ visit(0,0,0);
+ return {...best,found:Object.fromEntries(ids.map((id,i)=>[id,best.counts[i]]))};
+}
+let worker=null, chosenIds=null;
+$('pruneGear').onclick=()=>{
+ if(!chosenIds?.size)return;
+ const count=state.gear.filter(gear=>!chosenIds.has(gear.id)).length;
+ if(!count||!confirm('최적 조합의 장비 '+chosenIds.size+'개를 남기고, 나머지 '+count+'개를 삭제할까요? 삭제한 장비는 복구할 수 없습니다.'))return;
+ state.gear=state.gear.filter(gear=>chosenIds.has(gear.id));
+ if(editing&&!chosenIds.has(editing))resetEntry();
+ if(lastAutoAddedId&&!chosenIds.has(lastAutoAddedId))lastAutoAddedId=null;
+ $('notice').textContent='최적 조합 외 장비 '+count+'개를 삭제했습니다.';
+ refresh();
+};
+function displayResult(result,goal){
+ chosenIds=new Set(result.items.filter(Boolean).map(gear=>gear.id));
+ $('pruneGear').disabled=!chosenIds.size||!state.gear.some(gear=>!chosenIds.has(gear.id));
+ const out=$('result'),total=Object.values(goal).reduce((a,b)=>a+b,0),missing=6-result.items.filter(Boolean).length;
+ out.replaceChildren();
+ const summary=el('div',null,'row spread');summary.append(el('span',result.score+' / '+total+'줄','metric'),el('strong','합계 '+result.stars+'★'));
+ const bar=el('progress');bar.max=total;bar.value=result.score;bar.setAttribute('aria-label','목표 달성률');
+ out.append(summary,bar,el('p',missing?'미등록 부위 '+missing+'개':result.score===total?'모든 목표를 달성했어요.':'목표 '+(total-result.score)+'줄이 남았어요.','muted compact'));
+ const matches=el('div',null,'goal-meter');
+ for(const [id,goalCount] of Object.entries(goal)){
+  const row=el('div',null,'row spread goal-row'), boxes=el('span',null,'goal-boxes');
+  boxes.setAttribute('aria-label',result.found[id]+'/'+goalCount+'줄');
+  row.dataset.skill=id;
+  for(let i=0;i<goalCount;i++)boxes.append(el('i',null,i<result.found[id]?'filled':''));
+  row.append(el('span',labels[id]),boxes);
+  matches.append(row);
+ }
+ out.append(matches,el('h3','선택된 장비'));
+ if(missing===6){out.append(el('p','등록된 장비가 없어요.','muted compact'));return;}
+ const list=el('div',null,'list');
+ [0,1,2,5,3,4].forEach(i=>{
+  const g=result.items[i];
+  const entry=el('div',null,'entry');
+  entry.append(el('strong',slots[i]+(g?' · '+g.stars+'★':' · 미등록')));
+  if(g?.name)entry.append(el('div',g.name,'muted compact'));
+  if(g)entry.append(chips(g.lines,g.optionNames));
+  list.append(entry);
+ });out.append(list);
+}
+function calculate(){
+ chosenIds=null;
+ $('pruneGear').disabled=true;
+ const current=++run,goal={...state.goal},gear=state.gear.slice(),payload={gear,goal};
+ worker?.terminate();worker=null;
+ function show(result){if(current===run)displayResult(result,goal);}
+ if(gear.length<35){show(solveGear(gear,goal));return;}
+ $('result').textContent='보유 장비의 조합을 계산 중입니다…';
+ const url=URL.createObjectURL(new Blob([solveGear.toString(),'\nonmessage=({data})=>postMessage(solveGear(data.gear,data.goal));'],{type:'text/javascript'}));
+ const fallback=()=>setTimeout(()=>{if(current===run)show(solveGear(gear,goal));},0);
+ try{
+  const task=new Worker(url);worker=task;
+  task.onmessage=e=>{task.terminate();if(worker===task)worker=null;show(e.data);};
+  task.onerror=()=>{task.terminate();if(worker===task)worker=null;fallback();};
+  task.postMessage(payload);
+ }catch(e){fallback();}
+ finally{URL.revokeObjectURL(url);}
+}
+$('solve').onclick=calculate;
+
+showDraft(state);renderEntry();renderInventory();renderPresets();calculate();
+</script>
+<script>
+'use strict';
+/* ---------- 캡처 인식 (개선판) ---------- */
+const OCR_SRC='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+const slotNamesEn=['Hat','Top','Pants','Gloves','Shoes','Cape'];
+const slotWordsEn=[['hat',0],['helmet',0],['top',1],['shirt',1],['pants',2],['bottom',2],['bottoms',2],['glove',3],['gloves',3],['shoe',4],['shoes',4],['boot',4],['boots',4],['cape',5],['cloak',5]];
+const slotWordsKo=[['모자',0],['상의',1],['하의',2],['장갑',3],['신발',4],['망토',5]];
+// 순서 중요: 직업 → 보스/크리/방무 → 공마 → 일반 데미지
+const skillPatterns=[
+ ['leap',/d[il1]men[s5][il1][o0]na[l1]|\bleap\b|차원|도약/],
+ ['white',/wh[il1]te\s*h[o0][l1]e|화이트|화이트\s*홀/],
+ ['registry',/reg[il1]s?t[ry]+|레지스트리/],
+ ['warrior',/warr[il1][o0]r|전사/],
+ ['mage',/mag[il1]c[il1]an|\bmage\b|마법사/],
+ ['bowman',/b[o0]wman|archer|궁수/],
+ ['thief',/th[il1]ef|도적/],
+ ['pirate',/p[il1]rate|해적/],
+ ['ied',/[il1]gn[o0]re|defen[cs]e|방어율|방무/],
+ ['boss',/\b[b8][o0ae][s5]{2}\b|보스/],
+ ['crit',/cr[il1]t|크리티컬/],
+ ['atk',/attack\s*p[o0]wer|mag[il1]c\s*att|공격력|마력/],
+ ['damage',/damage|데미지/]
+];
+const prefsKey='quanah-capture-prefs';
+let prefs={lang:'eng',fallback:'entry',only3:true,skipDup:true,sound:true,sockRule:true,sockColors:['red','gray','green','prismatic'],myJob:'warrior',volume:90,invXOnly:false,junkSkills:['boss','damage','ied']};
+const JOB_KO={warrior:'전사',mage:'마법사',bowman:'궁수',thief:'도적',pirate:'해적'};
+try{Object.assign(prefs,JSON.parse(localStorage.getItem(prefsKey)||'{}'));}catch(e){}
+function savePrefs(){try{localStorage.setItem(prefsKey,JSON.stringify(prefs));}catch(e){}}
+$('ocrLang').value=prefs.lang;$('slotFallback').value=prefs.fallback;
+$('ocrLang').onchange=()=>{prefs.lang=$('ocrLang').value;savePrefs();};
+$('slotFallback').onchange=()=>{prefs.fallback=$('slotFallback').value;savePrefs();};
+for(const id of ['only3','skipDup','sound']){$(id).checked=prefs[id];$(id).onchange=()=>{prefs[id]=$(id).checked;savePrefs();};}
+
+function norm(s){return String(s).toLowerCase().replace(/[‘’`´]/g,"'").replace(/[|¦]/g,'l').replace(/\s+/g,' ').trim();}
+function token(s){return norm(s).replace(/'s$/,'').replace(/[^a-z0-9가-힣]/g,'');}
+function lev(a,b){
+ const d=Array.from({length:b.length+1},(_,i)=>i);
+ for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}
+ return d[b.length];
+}
+function fuzzy(tok,word,tol=word.length>=9?2:word.length>=5?1:0){
+ return Boolean(tok)&&Math.abs(tok.length-word.length)<=tol&&lev(tok,word)<=tol;
+}
+function slotOfToken(tok){
+ for(const [w,i] of slotWordsEn)if(fuzzy(tok,w))return i;
+ for(const [w,i] of slotWordsKo)if(tok.includes(w))return i;
+ return null;
+}
+function readWords(tsv){
+ return tsv.split(/\r?\n/).slice(1).flatMap(line=>{
+  const cols=line.split('\t');
+  if(cols[0]!=='5'||!cols[11]?.trim())return [];
+  const [x,top,w,h]=cols.slice(6,10).map(Number);
+  return [{x,y:top+h/2,w,h,text:cols[11].trim()}];
+ });
+}
+function textRows(words){
+ const rows=[];
+ for(const word of [...words].sort((a,b)=>a.y-b.y)){
+  const row=rows.find(r=>Math.abs(r.y-word.y)<=Math.max(3,word.h*.45));
+  if(row)row.words.push(word);else rows.push({y:word.y,words:[word]});
+ }
+ return rows.map(row=>{
+  const words=row.words.sort((a,b)=>a.x-b.x);
+  return {y:row.y,x:words[0].x,h:Math.max(...words.map(w=>w.h)),text:words.map(w=>w.text).join(' '),words};
+ });
+}
+/* 장비명 찾기: "Libae's Supercharged Hat" 를 오타에 관대하게 */
+function findTitles(rows){
+ const found=[];
+ for(const row of rows){
+  const toks=row.words.map(w=>token(w.text));
+  for(let i=0;i<toks.length;i++){
+   const t=toks[i],n=toks[i+1]||'';
+   const isTitle=fuzzy(t,'supercharged')||fuzzy(t,'libae')||fuzzy(t,'libaes')||(fuzzy(t,'super')&&fuzzy(n,'charged'))||/^super.{0,2}char/.test(t)||/리베|슈퍼차지/.test(t);
+   if(!isTitle)continue;
+   let slot=null,last=i;
+   for(let j=i;j<Math.min(toks.length,i+4);j++){const s=slotOfToken(toks[j]);if(s!==null){slot=s;last=j;break;}}
+   // "Libae's Laboratory"(맵 이름), "Libae's Supercharged Equipment Set"(세트 효과) 같은 줄은 장비명이 아님
+   if(slot===null)continue;
+   const own=row.words.slice(i,last+1);
+   const x0=own[0].x,x1=own.at(-1).x+own.at(-1).w;
+   found.push({x:(x0+x1)/2,x0,x1,y:row.y,h:row.h,slot,text:own.map(w=>w.text).join(' ')});
+   i=last;
+  }
+ }
+ // 같은 장비명의 앞뒤 조각("Libae's" + "Supercharged")이 겹쳐 잡히면 하나로
+ return found.filter((t,i)=>!found.some((o,j)=>j<i&&Math.abs(o.y-t.y)<t.h&&Math.abs(o.x-t.x)<t.h*6));
+}
+function slotFromLabels(rows){
+ for(let i=0;i<rows.length;i++){
+  const text=norm(rows[i].text);
+  const m=text.match(/(?:type|armor|equip(?:ment)?\s*type|장비\s*분류|분류)\s*[:.]?\s*([a-z가-힣]+)/);
+  if(m){const s=slotOfToken(token(m[1]));if(s!==null)return s;}
+  if(/^\s*armor\s*$/.test(text)&&rows[i+1]){const s=slotOfToken(token(rows[i+1].text));if(s!==null)return s;}
+ }
+ return null;
+}
+const plusOne=/\s*(?:skill\s*)?(?:level\s*)?(?:l[vwy][.:,]?\s*)?[+＋]\s*[1il!|\]][\s.,)\]]*$/i;
+const plusOneLoose=/(?:level|l[vwy])[.:]?\s*[1il]\s*$|[+＋]\s*[1il!|\]]\b/i;
+// 한 줄 안에서 글자 사이가 크게 벌어지면 (옆 툴팁·다른 UI) 별개 줄로 나눈다
+function splitRows(rows){
+ return rows.flatMap(row=>{
+  const parts=[[row.words[0]]];
+  for(let i=1;i<row.words.length;i++){
+   const a=row.words[i-1],b=row.words[i];
+   if(b.x-(a.x+a.w)>Math.max(a.h,b.h)*2.5)parts.push([b]);else parts.at(-1).push(b);
+  }
+  return parts.map(words=>({y:row.y,x:words[0].x,h:Math.max(...words.map(w=>w.h)),text:words.map(w=>w.text).join(' '),words}));
+ }).sort((a,b)=>a.y-b.y||a.x-b.x);
+}
+// 스킬 이름에서 가장 먼저 나오는 키워드로 판정 ("Pirate Attack" → 해적, "Critical Damage Enhancement" → 크리)
+function classify(name){
+ let best=null,at=Infinity;
+ for(const [id,p] of skillPatterns){const m=name.match(p);if(m&&m.index<at){at=m.index;best=id;}}
+ return best;
+}
+const HOLO=/h[o0][l1][o0]gr?a?m|홀로그램/i;
+const STOP=/scroll\s*enhance|jewel\s*stat|potential\s*:|잠재\s*옵션|주문서/i;
+// 스킬 줄 읽기: "[Hologram]" 이 나올 때마다 새 옵션으로 끊어서 본다.
+// OCR이 "+1"을 빠뜨리거나 두 줄을 한 줄로 붙여 읽어도 옵션을 각각 잡는다.
+function parseOptions(rows){
+ const options=[];
+ for(const r of splitRows(rows)){
+  let raw=r.text.replace(/\s+/g,' ').trim();
+  const stop=raw.search(STOP);
+  if(stop>=0)raw=raw.slice(0,stop);
+  for(const seg of raw.split(/(?=[\[({]?\s*h[o0][l1][o0]gr?a?m)/i)){
+   if(seg.trim().length<4)continue;
+   // OCR이 "[Hologram]"을 빠뜨려도 "… Attack/Enhancement Skill … Lv. +1" 형태면 스킬 줄로 본다
+   const holo=HOLO.test(seg)||/(?:attack|enhancement)\s+skill\b.*(?:\bl[vwy]\b|level|[+＋]\s*[1il])/i.test(seg);
+   let name=seg.replace(/[+＋]\s*[1il!|\]][\s\S]*$/,'').replace(/[\s|]+$/,'').replace(/(?:\s+skill)?(?:\s+level)?(?:\s+l[vwy][.:,]?)?\s*$/i,'').trim();
+   const lower=norm(name);
+   const known=classify(lower.replace(HOLO,''));
+   if(holo){
+    if(!known&&!(/[+＋]\s*[1il!|\]]|\bl[vwy]\b|level|skill/i.test(seg)&&/enhance|attack/.test(lower)))continue;
+    if(known==='damage'&&!/enhance|강화/.test(lower))continue;
+   }else{
+    // [Hologram] 없이 나오는 건 차원 도약·화이트 홀·레지스트리 + 레벨 표시뿐 (스탯 줄 제외)
+    if(!['leap','white','registry'].includes(known)||!/[+＋]\s*[1il!|\]]|\bl[vwy]\b|level/i.test(seg))continue;
+    name=name.replace(/^.*?(?=d[il1]men|wh[il1]te|reg[il1]|차원|화이트|레지)/i,'');
+   }
+   const id=known||'other';
+   // 표시용 이름 정리: "[Hologram] Boss Damage Enhancement" 형태로
+   name=name.replace(/^[\[({]?\s*h[o0][l1][o0]gr?a?m\s*[\]})j|1l]?\s*/i,'').replace(/\b[a-z]/g,c=>c.toUpperCase()).replace(/\bAtt\b/g,'ATT');
+   if(holo)name='[Hologram] '+name;
+   if(options.some(o=>id==='other'?o.name===name:o.id===id&&Math.abs(o.x-r.x)<r.h*8))continue;
+   options.push({id,name,x:r.x,y:r.y});
+  }
+  if(stop>=0&&options.length)break;
+ }
+ return options;
+}
+function keepLeftCluster(options){
+ if(options.length<=3)return {options,split:false};
+ const xs=[...options].sort((a,b)=>a.x-b.x);
+ let gap=0,at=-1;
+ for(let i=1;i<xs.length;i++)if(xs[i].x-xs[i-1].x>gap){gap=xs[i].x-xs[i-1].x;at=i;}
+ if(gap<60)return {options,split:false};
+ const cut=xs[at].x;
+ return {options:options.filter(o=>o.x<cut),split:true};
+}
+function dedupe(options){
+ const out=[];
+ for(const o of options)if(!out.some(p=>o.id==='other'?p.name===o.name:p.id===o.id))out.push(o);
+ return out;
+}
+function analyzeWords(words){
+ const rows=textRows(words);
+ const titles=findTitles(rows).sort((a,b)=>a.x-b.x);
+ let pool=words,paired=false,title=titles[0]||null,tipRect=null,tipBox=null;
+ if(title){
+  const other=titles.find(t=>t.x-title.x>Math.max(110,(title.x1-title.x0)*.9));
+  // 툴팁 가로 범위: 비교 툴팁이 있으면 두 장비명 사이 간격, 없으면 장비명 폭 기준
+  const half=other?(other.x-title.x)/2:Math.max((title.x1-title.x0)*.85,title.h*12);
+  if(other)paired=true;
+  pool=words.filter(w=>{const cx=w.x+w.w/2;return cx>=title.x-half&&cx<title.x+half&&w.y>=title.y-title.h*1.5;});
+  tipRect={x:title.x-half,y:title.y-title.h*2,w:half*2,h:title.h*34};
+  title.other=other||null;
+ }
+ const poolRows=textRows(pool);
+ let {options,split}=keepLeftCluster(parseOptions(poolRows));
+ options=dedupe(options);
+ let slot=title?.slot??null,method=slot!==null?'장비명':null;
+ if(slot===null){slot=slotFromLabels(poolRows);if(slot!==null)method='부위 표기';}
+ if(title){
+  // 툴팁(비교 툴팁 포함)이 덮은 영역: 장비명·스킬 줄 위치로 추정 (툴팁은 장비명 기준 좌우 대칭)
+  const pad=title.h*.8,left=Math.min(title.x0,...options.map(o=>o.x))-pad,halfW=title.x-left;
+  tipBox={x0:left,x1:(title.other?title.other.x:title.x)+halfW,y0:title.y-title.h*2.5,y1:title.y+title.h*40};
+ }
+ return {title,options,slot,method,paired:paired||split||titles.length>1,rows,tipRect,tipBox,job:title?readJob(poolRows,title):null};
+}
+// 장비 직업군: 장비명 줄 "(Warrior)" 또는 "Required Job Warrior" 줄에서 읽는다
+const JOB_WORDS=[['warrior',/warr?i[o0]r|전사/i],['mage',/mag[il1]c[il1]an|마법사/i],['bowman',/b[o0]wman|궁수/i],['thief',/th[il1]ef|도적/i],['pirate',/p[il1]rate|해적/i]];
+function readJob(rows,title){
+ const near=rows.filter(r=>Math.abs(r.y-title.y)<title.h*.8).map(r=>r.text).join(' ');
+ const req=rows.filter(r=>/required\s*j[o0]b|착용\s*직업/i.test(r.text)).map(r=>r.text.replace(/.*j[o0]b|.*직업/i,'')).join(' ');
+ for(const src of [near,req])for(const [id,re] of JOB_WORDS)if(re.test(src))return id;
+ return null;
+}
+
+/* ---------- 툴팁 패널 찾기 (원본 로직 유지) ---------- */
+const iconTemplates=[[0,"001100001100000110000000000000000011000011111110001111000011110111000011000111111011000001011111111000000001110111111111100000100111111111111000000111111111111111100101110111111111100111111111111110100001100111101000110000111110111110011000000010111010011000000010010110001100000011110100000011000100011000000000111111110000"],[0,"000000000000000111000001111000001111000011111110001111000011110111000011000111111000000001011111101000000000110111111111100000100111111111111000000111111111111111100101110111111111100011011011110110100001100111101000110000111110111110011000000010111010011000000010010110001100000011110100000011000100011000000000111111110000"],[1,"000110000000111000000000000000111110111100000001111110111100000011110100011110000111111000001111000111111110111111110111111100011111111111111100011111111111111110011111111111111110111111111111111110111111110111111110111111110111111111001111010111110001011111000111100000011111000111100000011110000111100000001110000111111000"],[1,"000000001100000000000000000000111110111100000001100000011110000111111100011111000111111110111111000111111110111111110111111100011111111111111100011111111111111110011111111111111110111111111111111110111111110111111110111111110111111111001111010111110001011111000111100000011111000111100000011110000111100000001110000111111000"],[2,"011100000000000100110000000000000010001100111000001000001111111111100001111101111001111111111000000000111110000000000000000000000110000001000000001100000000110000111000000000001110001110000001110000111100000000111100111000000000001100000000000000000000000000000000000000000000000000001000000000000000000000000000000000001000"],[4,"001111111111111100001111101111100000011110111111000000011101111100011000111111111111111110111111111111111110111111111110111101000111111110111101000011111100000011000011111100111111000011111100111110000011111100101100000000001101011000000000001110111000000000001101110000100000000111100000111111111100000000111111111000000000"],[5,"000111111111111000001111111111111100001111111111111100011111111111011110011011111110011110111000101000011111111000101000001111111011101111000111110011111111001111110111111111101111111111111111110110011111111111110110111111111111111100111100111110011100111000001110011100110000000000001100110000000000011000011000000000010000"],[5,"000000000111000000000000000000000000000000000000000000000000000000000000000111111111111000001111111111111100011111111111011110011011111110011110111000101000011111111011101111000111110011111111001111110111111111101111111111111111110110111111111111111110111100111110011100111000001110011100110000000000011100011000000000010000"]];
+function iconSignature(data,width,height){
+ const points=[];let minX=width,minY=height,maxX=-1,maxY=-1;
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const i=(y*width+x)*4,hi=Math.max(data[i],data[i+1],data[i+2]),lo=Math.min(data[i],data[i+1],data[i+2]);
+  if(hi<105||hi-lo<48)continue;
+  points.push([x,y]);minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);
+ }
+ const w=maxX-minX+1,h=maxY-minY+1;
+ if(points.length<35||w<width*.2||h<height*.23)return null;
+ const bins=Array(324).fill('0');
+ for(const [x,y] of points)bins[Math.floor((y-minY)*18/h)*18+Math.floor((x-minX)*18/w)]='1';
+ return bins.join('');
+}
+function matchEquipmentIcon(signature){
+ if(!signature)return null;
+ const scores=new Map();
+ for(const [s,sample] of iconTemplates){
+  let common=0,total=0;
+  for(let i=0;i<sample.length;i++){if(sample[i]===signature[i]&&sample[i]==='1')common++;total+=Number(sample[i])+Number(signature[i]);}
+  scores.set(s,Math.max(scores.get(s)||0,2*common/total));
+ }
+ const ranking=[...scores].sort((a,b)=>b[1]-a[1]);
+ return ranking[0][1]>=.74&&ranking[0][1]-ranking[1][1]>=.06?ranking[0][0]:null;
+}
+function readEquipmentIcon(panel){
+ if(!panel||!panel.scale)return null;
+ const scale=panel.scale,x0=Math.round(panel.cx-151*scale),y0=Math.round(panel.cy+35*scale),w=Math.round(76*scale),h=Math.round(53*scale);
+ if(x0<0||y0<0||x0+w>shot.width||y0+h>shot.height||w<4||h<4)return null;
+ return matchEquipmentIcon(iconSignature(shot.getContext('2d').getImageData(x0,y0,w,h).data,w,h));
+}
+function locateTooltipPanels({data,width,height}){
+ const bands=[];
+ for(let y=0;y<height;y++){
+  let first=-1,last=-1,count=0;
+  const record=()=>{const span=last-first+1;if(span>=48&&span<=900&&count>=span*.12)bands.push({y,x:(first+last)/2,span});};
+  for(let x=0;x<width;x++){
+   const i=(y*width+x)*4,r=data[i],g=data[i+1],b=data[i+2];
+   if(r<150||g<45||g>213||r-g<35||g-b<27)continue;
+   if(first>=0&&x-last>26){record();first=-1;count=0;}
+   if(first<0)first=x;last=x;count++;
+  }
+  if(first>=0)record();
+ }
+ const byY=Array.from({length:height},()=>[]);
+ for(const band of bands)byY[band.y].push(band);
+ const candidates=[];
+ for(const band of bands){
+  if(band.span<100)continue;
+  const scale=band.span/246;
+  const peers=(gap,min,max)=>{
+   const matches=[],expected=band.y-gap*scale;
+   for(let y=Math.max(0,Math.round(expected-5*scale));y<=Math.min(height-1,Math.round(expected+5*scale));y++){
+    if(y>=band.y)break;
+    for(const row of byY[y])if(Math.abs(row.x-band.x)<20*scale&&row.span>=band.span*min&&row.span<=band.span*max)matches.push(row);
+   }
+   return matches;
+  };
+  const upper=peers(32,.26,.55),middle=peers(16,.33,.66);
+  if(upper.length<2||middle.length<2)continue;
+  const x=Math.max(0,Math.floor(band.x-177*scale)),y=Math.max(0,Math.floor(band.y-114*scale)),right=Math.min(width,Math.ceil(band.x+164*scale));
+  candidates.push({x,y,w:right-x,h:Math.min(height-y,Math.ceil(645*scale)),scale,cx:band.x,cy:band.y,score:upper.length+middle.length});
+ }
+ const distinct=[];
+ candidates.sort((a,b)=>b.score-a.score);
+ for(const p of candidates)if(!distinct.some(q=>Math.abs(q.cx-p.cx)<Math.min(q.w,p.w)*.45&&Math.abs(q.cy-p.cy)<35))distinct.push(p);
+ return distinct.sort((a,b)=>a.cx-b.cx);
+}
+
+/* ---------- OCR ---------- */
+let captureStream=null,captureVideo=null,captureBusy=false,captureResult=null,region=null,dragStart=null;
+const shot=$('captureCanvas');
+const workers=new Map();
+function loadTesseract(){
+ if(globalThis.Tesseract)return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+  const s=el('script');s.src=OCR_SRC;s.onload=resolve;
+  s.onerror=()=>{s.remove();reject(Error('인식 모듈을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'));};
+  document.head.append(s);
+ });
+}
+function ocrWorker(lang){
+ if(!workers.has(lang))workers.set(lang,(async()=>{
+  await loadTesseract();
+  const w=await globalThis.Tesseract.createWorker(lang.split('+'),1,{logger:m=>{
+   if(m.status==='recognizing text')$('captureStatus').textContent=passLabel+' · '+Math.round(m.progress*100)+'%';
+   else if(/load|initializ/.test(m.status||''))$('captureStatus').textContent='인식 모듈 준비 중 · '+(m.status||'');
+  }});
+  return w;
+ })().catch(e=>{workers.delete(lang);throw e;}));
+ return workers.get(lang);
+}
+let passLabel='툴팁 읽는 중';
+function otsu(hist,total){
+ let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
+ let sumB=0,wB=0,best=0,t=128;
+ for(let i=0;i<256;i++){wB+=hist[i];if(!wB)continue;const wF=total-wB;if(!wF)break;sumB+=i*hist[i];
+  const mB=sumB/wB,mF=(sum-sumB)/wF,v=wB*wF*(mB-mF)**2;if(v>best){best=v;t=i;}}
+ return t;
+}
+// mode: bin = 밝은 글자를 검정으로 이진화 / inv = 반전 그레이 / soft = 원본 방식
+function prepare(rect,scale,mode){
+ const c=el('canvas');
+ c.width=Math.max(1,Math.round(rect.w*scale));c.height=Math.max(1,Math.round(rect.h*scale));
+ const x=c.getContext('2d',{willReadFrequently:true});
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+ if(mode==='soft')x.filter='grayscale(1) contrast(1.45)';
+ x.drawImage(shot,rect.x,rect.y,rect.w,rect.h,0,0,c.width,c.height);
+ if(mode==='soft')return c;
+ const img=x.getImageData(0,0,c.width,c.height),d=img.data,hist=new Uint32Array(256),n=d.length/4;
+ for(let i=0;i<d.length;i+=4){const v=Math.max(d[i],d[i+1],d[i+2]);d[i]=v;hist[v]++;}
+ const t=Math.min(175,Math.max(105,otsu(hist,n)));
+ for(let i=0;i<d.length;i+=4){
+  const v=d[i];
+  const out=mode==='bin'?(v>t?0:255):Math.max(0,Math.min(255,255-(v-60)*1.6));
+  d[i]=d[i+1]=d[i+2]=out;d[i+3]=255;
+ }
+ x.putImageData(img,0,0);
+ return c;
+}
+function score(a){
+ if(!a)return -1;
+ const n=a.options.length;
+ return (n>=1&&n<=3?100:0)+(a.slot!==null?30:0)+(a.title?10:0)+Math.min(n,3);
+}
+function selectRegion(value){
+ region=value;
+ const box=$('captureRegion');box.hidden=!value;if(!value)return;
+ Object.assign(box.style,{left:100*value.x/shot.width+'%',top:100*value.y/shot.height+'%',width:100*value.w/shot.width+'%',height:100*value.h/shot.height+'%'});
+}
+let autoAddPending=false,lastAutoAddedId=null;
+function saveRecognizedGear(gear){
+ // 안전장치: 필요 없는 스킬이 붙은 장비는 어떤 경로로도 보유 장비에 넣지 않음
+ if(typeof junkOf==='function'&&junkOf(gear.options.map(o=>o.id),gear.options.map(o=>o.name)).length)return null;
+ const id=uid();
+ state.gear.push({id,slot:gear.slot,lines:gear.options.map(o=>o.id),optionNames:gear.options.map(o=>o.name),stars:0,name:gear.name,sockets:gear.sockets||null,job:gear.job||null});
+ lastAutoAddedId=id;refresh();return id;
+}
+let lastSockAddedId=null;
+function undoAutoAdd(){
+ const id=lastAutoAddedId,sid=lastSockAddedId;lastAutoAddedId=null;lastSockAddedId=null;
+ const index=id?state.gear.findIndex(g=>g.id===id):-1,sIndex=sid?state.sock.findIndex(s=>s.id===sid):-1;
+ if(index<0&&sIndex<0){$('captureStatus').textContent='취소할 자동 추가 장비가 없습니다.';return;}
+ let name='';
+ if(index>=0){const [gear]=state.gear.splice(index,1);name=gear.name;if(editing===id)resetEntry();}
+ if(sIndex>=0){const [s]=state.sock.splice(sIndex,1);name=name||s.name;}
+ refresh();$('captureStatus').textContent=name+' 자동 추가를 취소했습니다.';
+}
+function buildGear(a,auto=false){
+ // 스킬 줄이 없어도 소켓 3개가 보이면 소켓 장비 후보로 넘긴다
+ if(!a||a.options.length>3)return null;
+ if(a.options.length<1&&!(a.title&&a.sockets&&a.sockets.length===3))return null;
+ let s=a.slot,method=a.method;
+ if(s===null&&auto)return null;
+ if(s===null){
+  if(prefs.fallback!=='entry')return {needSlot:true};
+  s=slot;method='부위 미인식 → 등록란 선택 부위';
+ }
+ const name=a.title?.slot!=null&&/super/i.test(a.title.text)
+  ? "Libae's Supercharged "+slotNamesEn[s]
+  : (prefs.lang==='eng'?"Libae's Supercharged "+slotNamesEn[s]:'리베 '+slots[s]);
+ return {slot:s,name,options:a.options.map(({id,name})=>({id,name})),method,sockets:a.sockets??null,cell:a.cell??null,job:a.job??null};
+}
+let busySince=0,captureRun=0;
+function resetWorkers(){for(const p of workers.values())p.then(w=>w.terminate()).catch(()=>{});workers.clear();}
+function withTimeout(promise,ms){
+ return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(Error('인식이 '+ms/1000+'초 안에 끝나지 않았어요. 다시 F2를 누르세요.')),ms))]);
+}
+async function recognizeFrame(crop=null,auto=false){
+ if(captureBusy){if(!auto)$('captureStatus').textContent='아직 이전 캡처를 읽는 중이에요.';return;}
+ const run=++captureRun;
+ captureBusy=true;busySince=performance.now();captureResult=null;
+ $('readRegion').disabled=true;$('useCapture').disabled=true;
+ if(!auto){$('captureStatus').textContent='툴팁 인식 준비 중…';$('readOptions').textContent='';$('rawText').textContent='';}
+ const t0=performance.now();
+ try{
+  const panels=crop?[]:locateTooltipPanels(shot.getContext('2d').getImageData(0,0,shot.width,shot.height));
+  // 원래 툴팁 찾기가 실제 게임 화면에서 실패하면, 장비 아이콘 상자 위치로 툴팁 범위를 잡는다 (전체 화면 OCR은 6초 이상 걸림)
+  let iconTip=null;
+  if(!crop&&!panels.length){try{iconTip=tooltipFromIcon();if(iconTip)panels.push(iconTip);}catch(e){}}
+  if(auto&&!crop){
+   // 같은 툴팁이 그대로 떠 있으면 다시 읽지 않음 (새 장비에 마우스를 올리면 바로 다음 차례에 읽음)
+   if(iconTip){
+    const sig=tipSignature(iconTip);
+    if(sig&&sig===lastTipSig&&lastAutoKey){$('captureStatus').textContent='자동 스캔 중 · '+lastAutoMsg;return;}
+    lastTipSig=sig;
+   }
+  }
+  const panel=panels[0]||null;
+  if(panel&&!crop)selectRegion(panel);
+  const area=crop||panel;
+  const full={x:0,y:0,w:shot.width,h:shot.height};
+  const passes=[];
+  if(area){
+   // 아이콘 기준 영역은 글자 크기를 알 수 있음: 아이콘 상자(L) 대비 글자 높이 ≈ L/7 → 약 24px가 되도록 확대
+   const s=area.icon?Math.min(3,Math.max(1.5,168/area.icon.L)):Math.min(4,Math.max(1.5,1300/area.w));
+   passes.push([area,s,'bin','6'],[area,s,'inv','6'],[area,Math.min(3,980/area.w),'soft','11']);
+  }
+  if(!crop){
+   const s=Math.max(1,Math.min(2.2,3600/Math.max(full.w,full.h)));
+   passes.push([full,s,'inv','11'],[full,s,'bin','11'],[full,Math.min(1.7,3100/Math.max(full.w,full.h)),'soft','11']);
+  }
+  // 자동 스캔: 툴팁 영역을 먼저 빠르게 읽고, 실패하면 같은 차례에 전체 화면을 한 번 더 읽는다 (예전 방식 = 안전망)
+  if(auto){
+   const fast=area?passes.find(p=>p[0]===area&&p[2]==='inv'):null;
+   const fullInv=passes.find(p=>p[0]===full&&p[2]==='inv');
+   passes.length=0;
+   if(fast)passes.push(fast);
+   if(fullInv)passes.push(fullInv);
+  }
+  const worker=await withTimeout(ocrWorker(prefs.lang==='kor'?'kor+eng':'eng'),90000);
+  if(run!==captureRun)return;
+  let best=null,raw='';
+  for(let i=0;i<passes.length;i++){
+   const [rect,s,mode,psm]=passes[i];
+   passLabel=auto?'자동 스캔 · 읽는 중':'툴팁 읽는 중 ('+(i+1)+'/'+passes.length+')';
+   if(!auto)$('captureStatus').textContent=passLabel;
+   const canvas=prepare(rect,s,mode);
+   await worker.setParameters({tessedit_pageseg_mode:psm,preserve_interword_spaces:'1',user_defined_dpi:'300'});
+   const {data}=await withTimeout(worker.recognize(canvas,{},{tsv:true,text:true}),30000);
+   if(run!==captureRun)return;
+   const words=readWords(data.tsv||'').map(w=>({...w,x:w.x/s+rect.x,y:w.y/s+rect.y,w:w.w/s,h:w.h/s}));
+   const a=analyzeWords(words);
+   if(panels.length>1)a.paired=true;
+   raw+='── 시도 '+(i+1)+' ('+mode+', psm '+psm+(rect===full?', 전체 화면':', 툴팁 영역')+') ──\n'+a.rows.map(r=>r.text).join('\n')+'\n\n';
+   if(score(a)>score(best))best=a;
+   if(score(best)>=140)break;
+  }
+  if(best&&best.slot===null&&panel){const s=readEquipmentIcon(panel);if(s!==null){best.slot=s;best.method='장비 그림';}}
+  if(best){
+   try{best.sockets=detectSockets(best.tipRect);}catch(e){best.sockets=null;}
+   try{best.cell=locateCell(best.tipBox);}catch(e){best.cell=null;}
+   raw+='툴팁 찾기: '+(iconTip?'아이콘 상자 ('+Math.round(iconTip.icon.x)+','+Math.round(iconTip.icon.y)+' 크기 '+iconTip.icon.L+')':panel?'툴팁 패널':'못 찾음 → 전체 화면')+' · 화면 '+shot.width+'×'+shot.height+'\n';
+   raw+='소켓: '+(best.sockets?sockText(best.sockets):'못 찾음')+' · 직업군: '+(JOB_KO[best.job]||'못 찾음')+' · 인벤토리 칸: '+(best.cell??'못 찾음')+'\n';
+  }
+  $('rawText').textContent=raw;
+  const gear=buildGear(best,auto);
+  const secs=((performance.now()-t0)/1000).toFixed(1)+'초';
+  if(auto){handleAutoResult(gear,best,secs);return;}
+  if(gear?.needSlot){
+   $('captureStatus').textContent='스킬 '+best.options.length+'줄은 읽었지만 부위를 못 찾았어요. 등록란에 채우기를 누르고 부위를 고르세요. ('+secs+')';
+   captureResult={slot,name:'',options:best.options,method:'부위 직접 선택'};
+   $('readOptions').textContent=best.options.map(o=>o.name+' +1').join('\n');
+   $('useCapture').disabled=false;
+  }else if(gear){
+   captureResult=gear;
+   $('useCapture').disabled=false;
+   $('readOptions').textContent=[gear.name,...gear.options.map(o=>o.name+' +1')].join('\n');
+   $('captureStatus').textContent=(best.paired?'왼쪽 툴팁 · ':'')+slots[gear.slot]+' · 스킬 '+gear.options.length+'줄 · '+gear.method+' ('+secs+')';
+   if(autoAddPending){
+    autoAddPending=false;captureResult=null;$('useCapture').disabled=true;
+    $('captureStatus').textContent=addScanned(gear).msg+' ('+secs+')';
+   }
+  }else{
+   const n=best?.options.length||0;
+   $('captureStatus').textContent=(n>3?'스킬 줄이 '+n+'개로 너무 많이 잡혔어요. 왼쪽 툴팁만 드래그해서 다시 읽어 주세요.':'스킬 줄을 찾지 못했어요. 아래 "인식된 원문"을 확인하고, 툴팁만 드래그해서 다시 읽어 주세요.')+' ('+secs+')';
+   $('rawDetails').open=true;
+  }
+ }catch(error){
+  if(run===captureRun){$('captureStatus').textContent='인식 오류 · '+error.message;if(/초 안에/.test(error.message))resetWorkers();}
+ }
+ finally{if(run===captureRun){autoAddPending=false;captureBusy=false;$('readRegion').disabled=false;}}
+}
+function fillShot(source,w,h,autoAdd=false,auto=false){
+ if(!w||!h){$('captureStatus').textContent='캡처한 화면이 비어 있어요. 게임 창이 최소화돼 있지 않은지 확인하고 다시 공유하세요.';return;}
+ if(captureBusy){
+  const secs=Math.round((performance.now()-busySince)/1000);
+  if(secs<40){$('captureStatus').textContent='아직 이전 캡처를 읽는 중이에요 ('+secs+'초째). 잠시 후 다시 F2를 누르세요.';return;}
+  // 40초 넘게 멈춰 있으면 이전 작업을 버리고 새로 시작
+  captureRun++;captureBusy=false;resetWorkers();
+ }
+ autoAddPending=autoAdd;
+ // 4K 등 큰 화면은 2560px 폭으로 줄여 속도 확보
+ const k=Math.min(1,2560/Math.max(w,h));
+ shot.width=Math.round(w*k);shot.height=Math.round(h*k);
+ shot.getContext('2d',{willReadFrequently:true}).drawImage(source,0,0,shot.width,shot.height);
+ selectRegion(null);$('captureReview').hidden=false;
+ recognizeFrame(null,auto);
+}
+function stopSharing(){
+ const old=captureStream;captureStream=null;
+ old?.getTracks().forEach(t=>t.stop());
+ if(captureVideo)captureVideo.srcObject=null;
+ captureVideo=null;
+ $('startShare').disabled=false;$('takeFrame').disabled=true;$('endShare').disabled=true;
+ stopAutoScan();$('autoScan').disabled=true;$('invShot').disabled=true;
+}
+$('startShare').onclick=async()=>{
+ $('startShare').disabled=true;
+ try{
+  if(!navigator.mediaDevices?.getDisplayMedia)throw Error('이 브라우저에서는 화면 공유를 사용할 수 없어요. Edge나 Chrome을 쓰거나 이미지를 입력하세요.');
+  captureStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+  captureStream.getVideoTracks()[0].addEventListener('ended',()=>{stopSharing();$('captureStatus').textContent='공유가 종료됐습니다.';},{once:true});
+  captureVideo=el('video');captureVideo.muted=true;captureVideo.playsInline=true;
+  captureVideo.srcObject=captureStream;await captureVideo.play();
+  $('takeFrame').disabled=false;$('endShare').disabled=false;$('autoScan').disabled=false;$('invShot').disabled=false;
+  $('captureStatus').textContent='게임 창 공유 중 · "자동 스캔 시작"을 누르면 게임에서 장비에 마우스만 올리면 돼요. (수동: 이 페이지에서 F2)';
+ }catch(error){stopSharing();$('captureStatus').textContent=error.message;}
+};
+$('endShare').onclick=()=>{stopSharing();$('captureStatus').textContent='공유가 종료됐습니다.';};
+function captureVideoFrame(){
+ if(!captureVideo){$('captureStatus').textContent='먼저 "게임 창 공유"를 눌러 게임 창을 선택하세요.';return;}
+ $('captureStatus').textContent='F2 감지 · 화면 캡처 중…';
+ fillShot(captureVideo,captureVideo.videoWidth,captureVideo.videoHeight,true);
+}
+$('takeFrame').onclick=captureVideoFrame;
+
+/* ---------- 자동 스캔 · 3줄 필터 · 중복 · 소리 ---------- */
+const gearKey=g=>g.slot+':'+(g.options?g.options.map(o=>o.id):g.lines).slice().sort().join(',');
+let autoOn=false,autoTimer=null,lastAutoKey='',lastAutoMsg='';
+// 알림음: 남김 = 딩동(높은음→낮은음 종소리), 분해 = 삐삐(짧고 높은 경고음 두 번), 이미 있음 = 띵 한 번
+// 음악을 틀어 놓아도 들리도록 크게(볼륨 조절 가능), 음악에 묻히지 않는 높은 음역 + 배음 있는 파형 사용
+function beep(kind){
+ if(!prefs.sound)return;
+ try{
+  const a=beep.ctx||(beep.ctx=new AudioContext());
+  if(a.state==='suspended')a.resume();
+  if(!beep.out){const comp=a.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.connect(a.destination);beep.out=comp;}
+  const vol=Math.max(0,Math.min(1,(prefs.volume??90)/100));
+  const note=(f,t,len,type,peak)=>{
+   const o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain();
+   o.type=type;o.frequency.value=f;o2.type='sine';o2.frequency.value=f*2;
+   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(peak*vol+0.0001,t+.008);g.gain.exponentialRampToValueAtTime(0.0001,t+len);
+   o.connect(g);o2.connect(g);g.connect(beep.out);o.start(t);o2.start(t);o.stop(t+len+.02);o2.stop(t+len+.02);
+  };
+  const t=a.currentTime+.01;
+  if(kind==='ok'){note(1319,t,.45,'triangle',1);note(1047,t+.22,.6,'triangle',1);}        // 딩~동
+  else if(kind==='bad'){note(2200,t,.12,'square',.55);note(2200,t+.18,.12,'square',.55);}  // 삐삐
+  else note(880,t,.25,'triangle',.6);                                                       // 띵
+ }catch(e){}
+}
+const logColors={ok:'#8fe3a1',dup:'#a9b4ca',bad:'#ff9a8a'};
+let logAdded=0,logTotal=0;
+function logScan(kind,text){
+ $('scanLogBox').hidden=false;
+ const li=el('li',text);li.style.color=logColors[kind];
+ $('scanLog').prepend(li);
+ while($('scanLog').children.length>40)$('scanLog').lastChild.remove();
+ logTotal++;if(kind==='ok')logAdded++;
+ $('scanCount').textContent='· '+logTotal+'건 스캔, '+logAdded+'건 추가';
+}
+function describe(gear){return slots[gear.slot]+' · '+gear.options.map(o=>labels[o.id]&&o.id!=='other'?labels[o.id]:o.name).join(' / ');}
+// 스캔한 장비를 판정(O/X/?)하고, 남길 장비만 목록에 추가하고, 인벤토리 칸에 표시한다
+function addScanned(gear){
+ const j=judge(gear),d=describe(gear)+(gear.sockets?' · 소켓 '+sockText(gear.sockets):'')+(gear.job?' · '+JOB_KO[gear.job]:'');
+ const where=gear.cell!=null?' · '+(gear.cell+1)+'번 칸':'';
+ if(j.v==='X'){
+  beep('bad');logScan('bad','X 분해 · '+j.why+' · '+d+where);markCell(gear.cell,'X',d);
+  return {kind:'bad',msg:'X 분해 ('+j.why+') · '+d+where};
+ }
+ const added=[],dups=[];
+ lastSockAddedId=null;lastAutoAddedId=null;
+ // 스킬 장비(3줄) → 보유 장비 목록
+ // 중복 기준: 스킬 장비 = 같은 부위 + 같은 스킬 줄 (소켓 인식 결과는 프레임마다 흔들릴 수 있어 비교하지 않음)
+ //           소켓 장비 = 같은 부위 + 같은 소켓 색 조합 (순서 무관)
+ let filled=false;
+ if(j.skill){
+  const same=prefs.skipDup&&state.gear.find(g=>gearKey(g)===gearKey(gear));
+  if(same){
+   dups.push('스킬');
+   // 예전에 소켓 없이 저장된 장비면 이번에 읽은 소켓·직업 정보를 채워 넣는다
+   if((!same.sockets||same.sockets.length!==3)&&gear.sockets?.length===3){same.sockets=gear.sockets.slice(0,3);filled=true;}
+   if(!same.job&&gear.job){same.job=gear.job;filled=true;}
+   if(filled)refresh();
+  }
+  else{saveRecognizedGear(gear);added.push('스킬');}
+ }
+ // 소켓 장비(내 직업군 + 소켓 3개 모두 쓸 수 있는 색) → 소켓 장비 목록
+ if(j.sock){
+  const sig=sockSig(gear.sockets);
+  if(added.includes('스킬'))added.push('소켓');   // 보유 장비에 소켓 정보까지 같이 저장됨 → 소켓 조합에도 자동 포함
+  else if(prefs.skipDup&&allSockItems().some(s=>s.slot===gear.slot&&sockSig(s.sockets)===sig)){if(!dups.includes('스킬'))dups.push('소켓');}
+  else{const id=uid();state.sock.push({id,slot:gear.slot,sockets:gear.sockets.slice(0,3),job:gear.job,name:gear.name});lastSockAddedId=id;added.push('소켓');refresh();}
+ }
+ const kind=added.length?(j.v==='O'?'ok':'dup'):'dup';
+ const tag=j.v==='?'?'? 확인 필요 · 추가 안 함 ['+j.why+']':j.v+' 남김 ['+j.why+']';
+ const what=added.length?' · '+added.join('·')+' 장비로 추가':dups.length?' · 이미 목록에 있음 (건너뜀'+(filled?', 소켓 정보 보완':'')+')':'';
+ beep(kind);logScan(kind,tag+what+' · '+d+where);markCell(gear.cell,j.v,d);
+ return {kind,msg:tag+what+' · '+d+where+(added.length?' · F3으로 취소':'')};
+}
+function handleAutoResult(gear,best,secs){
+ if(!gear){
+  // 툴팁이 없거나 못 읽음 → 같은 장비를 다시 올리면 다시 처리되도록 기억을 지운다
+  lastAutoKey='';
+  $('captureStatus').textContent='자동 스캔 중 · 장비 툴팁을 기다리는 중… ('+secs+')';
+  return;
+ }
+ // 같은 툴팁을 계속 보고 있으면 다시 처리하지 않음 (소켓 인식이 프레임마다 흔들려도 같은 장비로 봄)
+ const key=gearKey(gear)+'@'+gear.cell+'@'+(j0=>j0.skill?'':sockSig(gear.sockets))(judge(gear));
+ if(key===lastAutoKey){$('captureStatus').textContent='자동 스캔 중 · '+lastAutoMsg;return;}
+ lastAutoKey=key;lastAutoMsg=addScanned(gear).msg;
+ $('captureStatus').textContent='자동 스캔 중 · '+lastAutoMsg+' ('+secs+')';
+}
+function autoTick(){
+ if(!autoOn)return;
+ if(captureVideo?.videoWidth&&!captureBusy)fillShot(captureVideo,captureVideo.videoWidth,captureVideo.videoHeight,false,true);
+ autoTimer=setTimeout(autoTick,700);
+}
+function startAutoScan(){
+ if(!captureVideo)return;
+ autoOn=true;lastAutoKey='';lastTipSig='';autoNoIcon=0;
+ try{(beep.ctx||(beep.ctx=new AudioContext())).resume();}catch(e){}
+ $('autoScan').textContent='자동 스캔 중지';$('autoScan').classList.remove('primary');
+ $('captureStatus').textContent='자동 스캔 중 · 게임으로 돌아가 장비에 마우스를 올리세요. (띵동 = 추가, 낮은 소리 = 이미 있음, 둔탁한 소리 = 3줄 아님)';
+ autoTick();
+}
+function stopAutoScan(){
+ autoOn=false;clearTimeout(autoTimer);
+ $('autoScan').textContent='자동 스캔 시작';$('autoScan').classList.add('primary');
+}
+$('autoScan').onclick=()=>autoOn?stopAutoScan():startAutoScan();
+$('volume').value=prefs.volume;$('volumeText').textContent=prefs.volume+'%';
+$('volume').oninput=()=>{prefs.volume=+$('volume').value;$('volumeText').textContent=prefs.volume+'%';savePrefs();};
+$('volume').onchange=()=>{const s=prefs.sound;prefs.sound=true;beep('ok');prefs.sound=s;};
+$('testOk').onclick=()=>{const s=prefs.sound;prefs.sound=true;beep('ok');prefs.sound=s;};
+$('testBad').onclick=()=>{const s=prefs.sound;prefs.sound=true;beep('bad');prefs.sound=s;};
+
+/* ---------- 소켓 색 판정 ---------- */
+const SOCK_KO={red:'빨강',gray:'검정',green:'초록',purple:'보라',blue:'파랑',prismatic:'흰색(무지개)'};
+const SOCK_SHORT={red:'빨',gray:'검',green:'초',purple:'보',blue:'파',prismatic:'흰'};
+const sockSig=s=>s?s.slice().sort().join(','):'';
+const SOCK_ALL=['red','gray','green','prismatic','purple','blue'];
+const sockText=s=>s&&s.length?s.map(c=>SOCK_KO[c]||c).join('·'):'없음';
+// 툴팁 안의 장비 아이콘 상자를 찾고, 장비 그림 위에 그려진 물방울 모양 소켓 보석의 색을 읽는다.
+// (실제 게임 화면으로 맞춤: 상자 = 테두리 진한 정사각형, 위쪽은 회청색 → 아래쪽은 흰색/연회색.
+//  보석은 상자 위쪽 6~23% 높이, 테두리 색이 소켓 색: 빨강=빨간 테두리+분홍 속, 보라, 파랑, 회색=무채색, 무지개=여러 색 테두리)
+// 툴팁의 장비 아이콘 상자(테두리 진한 정사각형, 아래쪽이 흰색/연회색) 찾기. rect 안 좌표 기준 {bx,ty,L} 목록
+function findIconBoxes(rect,minL=40,firstOnly=true){
+ const x0=Math.max(0,Math.floor(rect.x)),y0=Math.max(0,Math.floor(rect.y));
+ const w=Math.min(shot.width-x0,Math.ceil(rect.w)),h=Math.min(shot.height-y0,Math.ceil(rect.h));
+ if(w<40||h<40)return {boxes:[],px:null};
+ const d=shot.getContext('2d',{willReadFrequently:true}).getImageData(x0,y0,w,h).data;
+ const px=(x,y)=>{x=Math.max(0,Math.min(w-1,Math.round(x)));y=Math.max(0,Math.min(h-1,Math.round(y)));const i=(y*w+x)*4;return [d[i],d[i+1],d[i+2]];};
+ const edge=p=>Math.max(...p)<150;
+ const boxes=[];
+ for(let y=0;y<h;y++){
+  let run=0,start=0;
+  for(let x=0;x<=w;x++){
+   if(x<w){const i=(y*w+x)*4,r=d[i],g=d[i+1],b=d[i+2],mn=r<g?(r<b?r:b):(g<b?g:b),mx=r>g?(r>b?r:b):(g>b?g:b);
+    if(mn>=190&&mx-mn<25){if(!run)start=x;run++;continue;}}
+   const L=run;run=0;
+   if(L<minL||L>240)continue;
+   if(!edge(px(start-1,y))&&!edge(px(start-2,y)))continue;
+   if(!edge(px(start+L,y))&&!edge(px(start+L+1,y)))continue;
+   let by=y;
+   while(by<y+L&&Math.max(...px(start+1,by))>=150)by++;
+   if(by>=y+L)continue;
+   if(!edge(px(start-2,by-L/2))&&!edge(px(start-1,by-L/2)))continue;
+   const ty=by-L+1;
+   if(ty<0)continue;
+   // 정사각형 테두리 확인: 왼쪽·오른쪽 세로선과 아래 가로선이 위에서 아래까지 진해야 함 (미니맵 등 오인 방지)
+   let n=0,okL=0,okR=0,okB=0;
+   for(let yy=ty+2;yy<by-1;yy+=2){n++;if(edge(px(start-1,yy))||edge(px(start-2,yy)))okL++;if(edge(px(start+L,yy))||edge(px(start+L+1,yy)))okR++;}
+   let m=0;for(let xx=start+2;xx<start+L-2;xx+=2){m++;if(edge(px(xx,by))||edge(px(xx,by+1)))okB++;}
+   // 마우스 커서가 상자 한쪽 테두리를 가릴 수 있어서 한쪽은 60%만 보여도 됨
+   if(okB<m*.9||Math.min(okL,okR)<n*.6||Math.max(okL,okR)<n*.9)continue;
+   // 장비 아이콘 상자는 위쪽이 회청색, 아래쪽이 흰색인 그라데이션 (그냥 흰 UI 창은 제외)
+   const S=p=>p[0]+p[1]+p[2],topC=S(px(start+3,ty+L*.08))+S(px(start+L-4,ty+L*.08)),botC=S(px(start+3,by-L*.12))+S(px(start+L-4,by-L*.12));
+   if(topC>botC-120)continue;
+   // 가운데에 장비 그림(검은 외곽선)이 있어야 함
+   let dk=0,tot=0;
+   for(let yy=ty+L*.3;yy<ty+L*.8;yy+=2)for(let xx=start+L*.25;xx<start+L*.75;xx+=2){tot++;if(Math.max(...px(xx,yy))<90)dk++;}
+   if(dk<tot*.04)continue;
+   if(boxes.some(b=>Math.abs(b.bx-start)<L*.3&&Math.abs(b.ty-ty)<L*.3))continue;
+   boxes.push({bx:start,ty,L,x:x0+start,y:y0+ty});
+   if(firstOnly)return {boxes,px};
+  }
+ }
+ return {boxes,px};
+}
+// 화면 전체에서 툴팁 위치를 추정: 가장 큰 아이콘 상자들 중 맨 왼쪽(비교 툴팁이면 왼쪽 = 마우스 올린 장비)
+// 상자 기준 툴팁 범위: 왼쪽 0.3L, 오른쪽 4.3L, 위 1.8L(장비명), 아래 8L(스킬 줄까지)
+function tooltipFromIcon(){
+ const {boxes}=findIconBoxes({x:0,y:0,w:shot.width,h:shot.height},50,false);
+ if(!boxes.length)return null;
+ // 비교 툴팁은 같은 크기 상자 2개가 같은 높이에 나란히 있음 → 그 왼쪽. 없으면 가장 큰 상자
+ const pair=boxes.filter(p=>boxes.some(q=>q!==p&&Math.abs(q.L-p.L)<=p.L*.06&&Math.abs(q.y-p.y)<=p.L*.1&&q.x>p.x)).sort((p,q)=>q.L-p.L||p.x-q.x)[0];
+ const maxL=Math.max(...boxes.map(b=>b.L));
+ const b=pair||boxes.filter(b=>b.L>=maxL*.85).sort((p,q)=>p.x-q.x||p.y-q.y)[0];
+ const x=Math.max(0,Math.round(b.x-b.L*.3)),y=Math.max(0,Math.round(b.y-b.L*1.8));
+ return {x,y,w:Math.round(Math.min(shot.width-x,b.L*4.3)),h:Math.round(Math.min(shot.height-y,b.L*8.2)),icon:b};
+}
+// 툴팁 모양 지문: 아이콘 상자와 장비명 줄을 작게 줄여 밝기를 비교 (같은 장비 툴팁이면 같음)
+let lastTipSig='',autoNoIcon=0;
+function tipSignature(t){
+ try{
+  // 툴팁 전체(장비명·스탯·스킬 줄 포함)를 32×72로 줄여 비교 → 스킬 줄이 다른 장비면 지문도 달라짐
+  const c=el('canvas');c.width=32;c.height=72;const x=c.getContext('2d',{willReadFrequently:true});
+  x.drawImage(shot,t.x,t.y,t.w,t.h,0,0,32,72);
+  const d=x.getImageData(0,0,32,72).data;let s=Math.round(t.icon.x/4)+','+Math.round(t.icon.y/4)+':';
+  for(let i=0;i<d.length;i+=4)s+=String.fromCharCode(65+((d[i]+d[i+1]+d[i+2])/48|0));
+  return s;
+ }catch(e){return '';}
+}
+function detectSockets(rect){
+ if(!rect)return null;
+ const {boxes,px}=findIconBoxes(rect,40,true);
+ if(!boxes.length)return null;
+ const {bx,ty,L}=boxes[0];
+ return readSockets(px,bx,ty,L);
+}
+function sockHue([r,g,b]){
+ const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+ if(mx-mn<70||mx<90)return null;
+ let hh;const c=mx-mn;
+ if(mx===r)hh=((g-b)/c+6)%6;else if(mx===g)hh=(b-r)/c+2;else hh=(r-g)/c+4;
+ hh*=60;
+ return hh<20||hh>=340?'R':hh<45?'O':hh<70?'Y':hh<165?'G':hh<250?'B':hh<300?'P':'M';
+}
+// 실측 평균색 (무손실 → 화면공유 수준): 흰색(무지개) (177,163,219) 연보라·밝음 / 보라 (144,84,169) / 빨강 (156,94,114)
+// 파랑 (70,119,159) / 검정 (77,81,92) 무채색 / 초록은 실측 없음 → 초록이 가장 큰 경우
+function gemColor(r,g,b){
+ const mx=Math.max(r,g,b),mn=Math.min(r,g,b),c=mx-mn,sum=r+g+b;
+ // 검정: 채도 낮고 어두움 (실측 채도 ≤24, 밝기 합 ≤322). 흰색은 축소·압축되면 채도가 27까지 떨어지지만 밝음(합 ≥384)
+ if(c<20||(c<32&&sum<350))return 'gray';
+ if(g>=r&&g>=b)return 'green';
+ if(r>=b)return 'red';
+ // 파랑이 가장 큰 경우: 파랑 보석은 빨강 성분이 초록보다 확실히 작음(R/G ≤ 0.66), 흰색은 R≈G, 보라는 초록이 낮음(G/R ≤ 0.65)
+ if(r<g*.82)return 'blue';
+ return g/r>=.72?'prismatic':'purple';
+}
+// 보석 찾기 기준을 두 번(보통 70, 민감 40) 써서 더 많이 찾은 쪽을 씀:
+// 화면 공유가 축소되면 밝은 흰색(무지개) 보석이 배경과 비슷해져 기준 70에서는 빠질 수 있음
+function readSockets(px,bx,ty,L){
+ const a=readSocketsT(px,bx,ty,L,70),b=readSocketsT(px,bx,ty,L,40);
+ return b.length>a.length?b:a;
+}
+function readSocketsT(px,bx,ty,L,T){
+ const yA=Math.floor(ty+L*.04),yB=Math.floor(ty+L*.19),yOn=Math.floor(ty+L*.15);
+ const bg={};
+ for(let y=yA;y<=yB;y++){const s=[];for(let i=2;i<8;i++)s.push(px(bx+i,y));s.sort((a,b)=>a[0]+a[1]+a[2]-b[0]-b[1]-b[2]);bg[y]=s[3];}
+ const diff=(p,q)=>Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])+Math.abs(p[2]-q[2]);
+ const groups=[];let cur=null,gap=0;
+ for(let x=Math.floor(bx+L*.06);x<Math.floor(bx+L*.94);x++){
+  let on=false;
+  for(let y=yA;y<yOn;y++)if(diff(px(x,y),bg[y])>T){on=true;break;}
+  if(on){if(!cur)cur={a:x,b:x};else cur.b=x;gap=0;}
+  else if(cur&&++gap>=2){groups.push(cur);cur=null;}
+ }
+ if(cur)groups.push(cur);
+ const out=[];
+ for(const {a,b} of groups){
+  if(b-a<L*.07||b-a>L*.25)continue;
+  // 물방울 모양 확인: 맨 윗줄이 좁아야 함 (장비 그림이 걸린 경우 제외)
+  let top=-1;
+  for(let y=yA;y<=yB&&top<0;y++)for(let x=a;x<=b;x++)if(diff(px(x,y),bg[y])>T){top=y;break;}
+  if(top<0)continue;
+  let wtop=0;for(let x=a;x<=b;x++)if(diff(px(x,top),bg[top])>T)wtop++;
+  if(wtop>(b-a+1)*.6)continue;
+  // 보석 색 = 보석 픽셀(배경과 다른 픽셀)의 평균색. 화면 공유 영상은 색 해상도가 절반(4:2:0)이라
+  // 1~2px 테두리 색은 뭉개지지만, 보석 전체 평균색은 유지됨. 아래쪽은 장비 그림과 겹칠 수 있어 보석 윗부분만 사용
+  const yEnd=Math.min(yB,Math.round(top+L*.12));
+  let sr=0,sg=0,sb=0,cnt=0;
+  for(let y=top;y<=yEnd;y++)for(let x=a;x<=b;x++){const p=px(x,y);if(diff(p,bg[y]||bg[yB])<=(T>=70?60:T))continue;sr+=p[0];sg+=p[1];sb+=p[2];cnt++;}
+  if(cnt<6)continue;
+  out.push(gemColor(sr/cnt,sg/cnt,sb/cnt));
+ }
+ return out.slice(0,3);
+}
+// 남김(O) / 분해(X) / 확인 필요(?) 판정
+// 필요 없는 스킬 찾기: 분류된 스킬(id)뿐 아니라 읽은 원문도 직접 확인 (OCR이 분류를 틀려도 잡히게)
+const JUNK_TEXT={boss:/\b[b8][o0ae][s5]{2}\b|보스/i,ied:/[il1]gn[o0]re|defen[cs]e|방어율|방무/i,
+ damage:/^(?!.*(cr[il1]t|[b8][o0ae][s5]{2}|attack|magic|크리|보스|공격)).*(d[a@]m[a@]ge|darnage|데미지)/i};
+function junkOf(ids,names=[]){
+ const out=new Set();
+ ids.forEach((id,i)=>{
+  if(prefs.junkSkills.includes(id))out.add(id);
+  const t=String(names[i]||'');
+  for(const k of prefs.junkSkills)if(JUNK_TEXT[k]?.test(t))out.add(k);
+ });
+ return [...out].map(k=>labels[k]);
+}
+// 스킬 장비(3줄)와 소켓 장비(내 직업군 + 쓸 수 있는 색 소켓 3개)는 따로 판정한다. 공략: 스킬은 같은 부위 소켓 장비로 전승하므로 둘 중 하나만 맞아도 남김.
+function sockOk(g){
+ if(!prefs.sockRule||!g.sockets||g.sockets.length!==3)return false;
+ if(g.job&&g.job!==prefs.myJob)return false;
+ return g.sockets.every(s=>prefs.sockColors.includes(s));
+}
+function judge(g){
+ const n=g.options.length,sock=sockOk(g);
+ // 18줄에 필요 없는 스킬(기본: 보스 데미지·데미지·방어율 무시)이 한 줄이라도 있으면 스킬 장비로는 쓸모없음
+ const junk=junkOf(g.options.map(o=>o.id),g.options.map(o=>o.name));
+ const skill=(prefs.only3?n>=3:n>=1)&&!junk.length;
+ const why=[];
+ if(skill)why.push('스킬 '+n+'줄');
+ if(sock)why.push('소켓 '+sockText(g.sockets)+(g.job?'':' · 직업 미확인'));
+ if(skill||sock)return {v:'O',why:why.join(' + '),skill,sock};
+ // 둘 다 아님 → 이유
+ if(prefs.sockRule&&!g.sockets)return {v:'?',why:n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')+' · 소켓 인식 실패',skill,sock};
+ const r=[n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')];
+ if(prefs.sockRule&&g.sockets){
+  if(g.job&&g.job!==prefs.myJob)r.push(JOB_KO[g.job]+' 장비');
+  else if(g.sockets.length<3)r.push('소켓 '+g.sockets.length+'개');
+  else r.push('소켓 '+sockText(g.sockets));
+ }
+ return {v:'X',why:r.join(' · '),skill,sock};
+}
+function renderSockPrefs(){
+ $('sockRule').checked=prefs.sockRule;
+ $('sockColors').replaceChildren(...SOCK_ALL.map(c=>{
+  const l=el('label'),i=el('input');i.type='checkbox';i.checked=prefs.sockColors.includes(c);
+  i.onchange=()=>{prefs.sockColors=SOCK_ALL.filter(x=>x===c?i.checked:prefs.sockColors.includes(x));savePrefs();};
+  l.append(i,' '+SOCK_KO[c]);return l;
+ }));
+}
+$('sockRule').onchange=()=>{prefs.sockRule=$('sockRule').checked;savePrefs();};
+$('junkSkills').replaceChildren(...['boss','damage','ied','crit','atk','other'].map(id=>{
+ const l=el('label'),i=el('input');i.type='checkbox';i.checked=prefs.junkSkills.includes(id);
+ i.onchange=()=>{prefs.junkSkills=i.checked?[...new Set([...prefs.junkSkills,id])]:prefs.junkSkills.filter(x=>x!==id);savePrefs();};
+ l.append(i,' '+labels[id]);return l;
+}));
+renderSockPrefs();
+
+/* ---------- 소켓 최적 조합 ---------- */
+const SOCK_CSS={red:'#e05a5a',gray:'#5b6170',green:'#4fbf6a',purple:'#a56be0',blue:'#4e8fe8',prismatic:'linear-gradient(135deg,#ff8a8a,#ffe08a,#8affa8,#8ad8ff,#c98aff)'};
+const SLOT_ORDER=[0,5,1,3,2,4];
+function sockChips(s){
+ const w=el('span',null,'row');w.style.gap='3px';w.style.display='inline-flex';
+ for(const c of s){const b=el('span',SOCK_SHORT[c]||c,'chip');b.title=SOCK_KO[c];b.style.cssText='background:'+SOCK_CSS[c]+';color:'+(c==='prismatic'?'#222':'#fff')+';border-color:transparent;font-weight:700';w.append(b);}
+ return w;
+}
+const sockValid=s=>s.sockets.length===3&&s.sockets.every(c=>prefs.sockColors.includes(c))&&(!s.job||s.job===prefs.myJob);
+// 장비 하나의 평가: 흰색은 장비당 1개까지만 의미(공략: 흰+2색), 나머지는 색이 다를수록 좋음
+function sockLocal(s){
+ const prism=s.sockets.filter(c=>c==='prismatic').length,rest=s.sockets.filter(c=>c!=='prismatic');
+ return {prism:Math.min(prism,1),wasted:Math.max(0,prism-1),distinct:new Set(rest).size,rest};
+}
+// 소켓 후보 = 소켓 장비 목록 + 보유 장비(스킬 장비) 중 소켓 3개를 읽은 것
+function allSockItems(){
+ const fromGear=state.gear.filter(g=>Array.isArray(g.sockets)&&g.sockets.length===3)
+  .map(g=>({id:g.id,slot:g.slot,sockets:g.sockets,job:g.job||null,name:g.name,fromGear:true,lines:g.lines.length}));
+ return [...state.sock,...fromGear];
+}
+function solveSockets(){
+ const valid=allSockItems().filter(sockValid);
+ const bySlot=slots.map((_,slot)=>{
+  const uniq=new Map();
+  for(const s of valid.filter(s=>s.slot===slot)){const k=sockSig(s.sockets);if(!uniq.has(k))uniq.set(k,s);}
+  const c=[...uniq.values()].map(s=>({s,...sockLocal(s)}));
+  // 부위당 후보는 흰색 있는 것·없는 것 각각 상위 몇 개만 (계산량 제한)
+  const rank=(a,b)=>b.distinct-a.distinct||a.wasted-b.wasted;
+  return [...c.filter(x=>x.prism).sort(rank).slice(0,5),...c.filter(x=>!x.prism).sort(rank).slice(0,5)];
+ });
+ let best=null;
+ const pick=Array(6).fill(null);
+ const evalPick=()=>{
+  let filled=0,prismItems=0,wasted=0,distinct=0;const cnt={};
+  for(const p of pick){if(!p)continue;filled++;prismItems+=p.prism;wasted+=p.wasted;distinct+=p.distinct;for(const c of p.rest)cnt[c]=(cnt[c]||0)+1;}
+  const vals=prefs.sockColors.filter(c=>c!=='prismatic').map(c=>cnt[c]||0);
+  const spread=vals.length?Math.max(...vals)-Math.min(...vals):0;
+  // 흰색 장비는 4부위까지만 이득, 넘으면 그 흰색 소켓은 낭비로 계산
+  const extra=Math.max(0,prismItems-4);
+  const score=filled*1000+Math.min(prismItems,4)*100-(wasted+extra)*60+distinct*10-spread*3;
+  if(!best||score>best.score)best={score,pick:pick.slice(),filled,prismItems:Math.min(prismItems,4),extra,wasted,cnt};
+ };
+ const go=i=>{
+  if(i===6){evalPick();return;}
+  pick[i]=null;go(i+1);
+  for(const c of bySlot[i]){pick[i]=c;go(i+1);}
+  pick[i]=null;
+ };
+ go(0);
+ return {best,valid};
+}
+function renderSockets(){
+ if(!$('sockPanel'))return;
+ const {best,valid}=solveSockets();
+ const all=allSockItems();
+ $('sockTotal').textContent='('+all.length+')';
+ const res=$('sockResult');res.replaceChildren();
+ const fullSet=best.filled===6&&best.prismItems===4&&!best.extra;
+ const head=el('div',null,'row spread');
+ head.append(el('strong',fullSet?'목표 조합 완성!':'현재 가능한 최선 조합 · '+best.filled+'/6부위'),el('span','흰색 포함 '+best.prismItems+'/4부위 · 색 분포 '+prefs.sockColors.filter(c=>c!=='prismatic').map(c=>SOCK_SHORT[c]+(best.cnt[c]||0)).join(' '),'muted compact'));
+ res.append(head);
+ const chosenIds=new Set();
+ let prismLeft=4-best.prismItems;
+ for(const i of SLOT_ORDER){
+  const p=best.pick[i],row=el('div',null,'entry row spread');
+  const left=el('div',null,'row');left.append(el('strong',slots[i]));
+  if(p){chosenIds.add(p.s.id);left.append(sockChips(p.s.sockets));if(p.wasted)left.append(el('span','흰색 '+(p.wasted+1)+'개 (1개만 유효)','muted compact'));}
+  else{
+   const need=prismLeft>0?'흰색 + 2색 (예: 흰'+prefs.sockColors.filter(c=>c!=='prismatic').slice(0,2).map(c=>SOCK_SHORT[c]).join('')+')':'3색 (예: '+prefs.sockColors.filter(c=>c!=='prismatic').slice(0,3).map(c=>SOCK_SHORT[c]).join('')+')';
+   if(prismLeft>0)prismLeft--;
+   left.append(el('span','없음 · 구해야 할 것: '+need,'compact'));left.lastChild.style.color='#ffb86b';
+  }
+  row.append(left);res.append(row);
+ }
+ const spare=valid.filter(s=>!chosenIds.has(s.id)).length,bad=all.length-valid.length;
+ res.append(el('p',(spare?'예비 소켓 장비 '+spare+'개 (조합에 안 쓰임 · 더 좋은 게 있으면 분해 가능)':'')+(bad?(spare?' · ':'')+'조건에 안 맞는 소켓 장비 '+bad+'개 (다른 직업군이거나 쓸 수 없는 색)':''),'muted compact'));
+ // 목록
+ const list=$('sockList');list.replaceChildren();
+ for(const i of SLOT_ORDER){
+  const items=all.filter(s=>s.slot===i);if(!items.length)continue;
+  const g=el('div',null,'inventory-group');g.append(el('h3',slots[i]+' · '+items.length+'개'));
+  for(const s of items){
+   const row=el('div',null,'entry row spread'),l=el('div',null,'row');
+   l.append(sockChips(s.sockets),el('span',(chosenIds.has(s.id)?'★ 조합에 사용':sockValid(s)?'예비':'✕ 조건 안 맞음')+(s.job?' · '+JOB_KO[s.job]:' · 직업 미확인')+(s.fromGear?' · 보유 장비('+s.lines+'줄)':''),'muted compact'));
+   // 보유 장비에서 온 것은 스킬 장비이기도 하므로 여기서 지우지 않고, 직업만 고칠 수 있게
+   if(s.fromGear){
+    const sel=el('select');sel.append(...[['','직업 미확인'],...Object.entries(JOB_KO)].map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
+    sel.value=s.job||'';sel.onchange=()=>{const g0=state.gear.find(x=>x.id===s.id);if(g0){g0.job=sel.value||null;refresh();}};
+    row.append(l,sel);
+   }else row.append(l,button('삭제',()=>{state.sock=state.sock.filter(x=>x.id!==s.id);refresh();}));
+   g.append(row);
+  }
+  list.append(g);
+ }
+}
+$('myJob').replaceChildren(...Object.entries(JOB_KO).map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
+$('myJob').value=prefs.myJob;
+$('myJob').onchange=()=>{prefs.myJob=$('myJob').value;
+ // 직업군별 쓸 수 있는 색 (공략 정리): 전사 빨·검·초 / 마법사 파 / 도적 보·검 / 궁수 파 제외 4색 / 해적은 공략에 없음 → 그대로
+ const map={warrior:['red','gray','green'],mage:['blue'],thief:['purple','gray'],bowman:['red','gray','green','purple']};
+ if(map[prefs.myJob])prefs.sockColors=['prismatic',...map[prefs.myJob]];
+ savePrefs();renderSockPrefs();renderSockets();};
+$('sockSlot').replaceChildren(...SLOT_ORDER.map(i=>{const o=el('option',slots[i]);o.value=i;return o;}));
+for(const id of ['sockC1','sockC2','sockC3'])$(id).replaceChildren(...SOCK_ALL.map(c=>{const o=el('option',SOCK_KO[c]);o.value=c;return o;}));
+$('sockAdd').onclick=()=>{state.sock.push({id:uid(),slot:+$('sockSlot').value,sockets:[$('sockC1').value,$('sockC2').value,$('sockC3').value],job:prefs.myJob,name:'직접 추가'});refresh();};
+// 색 설정을 바꾸면 조합도 다시 계산
+$('sockColors').addEventListener('change',()=>renderSockets());
+renderSockets();
+
+// 중복 정리: 같은 부위·같은 스킬 줄 장비는 하나만(정보가 많은 쪽을 남기고 소켓·직업·스타포스를 합침),
+// 소켓 장비 목록은 같은 부위·같은 소켓 색 조합을 하나만, 보유 장비와 소켓이 똑같은 소켓 장비도 제거
+function dedupeAll(){
+ const keep=new Map();let removed=0;
+ for(const g of state.gear){
+  const k=gearKey(g),o=keep.get(k);
+  if(!o){keep.set(k,g);continue;}
+  removed++;
+  if((!o.sockets||o.sockets.length!==3)&&g.sockets?.length===3)o.sockets=g.sockets;
+  if(!o.job&&g.job)o.job=g.job;
+  o.stars=Math.max(o.stars,g.stars);
+  if(editing===g.id)resetEntry();
+ }
+ state.gear=[...keep.values()];
+ const seen=new Set(state.gear.filter(g=>g.sockets?.length===3).map(g=>g.slot+'|'+sockSig(g.sockets)));
+ const before=state.sock.length;
+ state.sock=state.sock.filter(s=>{const k=s.slot+'|'+sockSig(s.sockets);if(seen.has(k))return false;seen.add(k);return true;});
+ removed+=before-state.sock.length;
+ lastAutoAddedId=null;lastSockAddedId=null;
+ return removed;
+}
+// 필요 없는 스킬(보뎀·뎀·방무 등)이 붙은 장비를 보유 장비에서 빼기. 소켓이 조건에 맞으면 소켓 장비 목록으로 옮김
+function removeJunkGear(){
+ let removed=0,moved=0;
+ state.gear=state.gear.filter(g=>{
+  if(!junkOf(g.lines,g.optionNames).length)return true;
+  removed++;
+  if(g.sockets?.length===3&&sockValid({sockets:g.sockets,job:g.job})&&!state.sock.some(s=>s.slot===g.slot&&sockSig(s.sockets)===sockSig(g.sockets))){
+   state.sock.push({id:uid(),slot:g.slot,sockets:g.sockets.slice(),job:g.job||null,name:g.name});moved++;
+  }
+  if(editing===g.id)resetEntry();
+  return false;
+ });
+ lastAutoAddedId=null;
+ return {removed,moved};
+}
+// 페이지를 열 때마다 자동으로 정리 (보유 장비에는 필요 없는 스킬 장비가 절대 남지 않게)
+{
+ const {removed,moved}=removeJunkGear();
+ if(removed){refresh();$('notice').textContent='필요 없는 스킬이 붙은 장비 '+removed+'개를 보유 장비에서 지웠어요'+(moved?' (그중 소켓이 맞는 '+moved+'개는 소켓 장비로 옮김)':'')+'.';}
+}
+$('junkGear').onclick=()=>{
+ const n=state.gear.filter(g=>junkOf(g.lines,g.optionNames).length).length;
+ if(!n){$('notice').textContent='필요 없는 스킬이 붙은 장비가 없어요.';return;}
+ if(!confirm('필요 없는 스킬('+prefs.junkSkills.map(id=>labels[id]).join('·')+')이 붙은 장비 '+n+'개를 보유 장비에서 지울까요? 소켓이 맞는 장비는 소켓 장비로 옮겨요.'))return;
+ const {removed,moved}=removeJunkGear();refresh();
+ $('notice').textContent='장비 '+removed+'개를 지웠어요'+(moved?' (소켓 장비로 '+moved+'개 옮김)':'')+'.';
+};
+// 페이지를 열 때 중복이 있으면 자동으로 정리
+{const n=dedupeAll();if(n){refresh();$('notice').textContent='중복 장비 '+n+'개를 자동으로 정리했어요.';}}
+$('dedupeGear').onclick=()=>{
+ const n=dedupeAll();refresh();
+ $('notice').textContent=n?'중복 장비 '+n+'개를 정리했어요.':'중복 장비가 없어요.';
+};
+
+/* ---------- 자동 백업: 고른 폴더에 장비 목록이 바뀔 때마다 저장 (크롬·엣지) ----------
+   quanah-libae-backup.json (항상 최신) + quanah-libae-backup-날짜.json (그날 마지막 상태) */
+const AB={dir:null,timer:0,last:'',ok:false};
+function abDb(){return new Promise((res,rej)=>{const r=indexedDB.open('quanah-backup',1);r.onupgradeneeded=()=>r.result.createObjectStore('h');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function abGet(k){const db=await abDb();return new Promise(res=>{const q=db.transaction('h').objectStore('h').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);});}
+async function abPut(k,v){const db=await abDb();return new Promise(res=>{const t=db.transaction('h','readwrite');t.objectStore('h').put(v,k);t.oncomplete=()=>res();t.onerror=()=>res();});}
+function abStatus(text,warn){$('autoBackupStatus').textContent=text;$('autoBackupStatus').style.color=warn?'#ffb86b':'';}
+async function abWrite(force){
+ if(!AB.dir||!AB.ok)return;
+ const data=JSON.stringify(state,null,2);
+ if(!force&&data===AB.last)return;
+ try{
+  const d=new Date(),day=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  for(const name of ['quanah-libae-backup.json','quanah-libae-backup-'+day+'.json']){
+   const f=await AB.dir.getFileHandle(name,{create:true}),w=await f.createWritable();await w.write(data);await w.close();
+  }
+  AB.last=data;
+  abStatus('자동 백업 켜짐 · '+AB.dir.name+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+' 저장');
+ }catch(e){AB.ok=false;abStatus('자동 백업 실패 · 버튼을 눌러 다시 연결하세요',true);$('autoBackup').textContent='자동 백업 다시 연결';}
+}
+window.queueAutoBackup=()=>{if(!AB.ok)return;clearTimeout(AB.timer);AB.timer=setTimeout(()=>abWrite(false),1500);};
+async function abInit(){
+ if(!window.showDirectoryPicker){$('autoBackup').hidden=true;abStatus('');return;}
+ try{
+  const h=await abGet('dir');
+  if(!h){abStatus('자동 백업 꺼짐');return;}
+  AB.dir=h;
+  if(await h.queryPermission({mode:'readwrite'})==='granted'){AB.ok=true;$('autoBackup').textContent='자동 백업 폴더 바꾸기';abStatus('자동 백업 켜짐 · '+h.name);abWrite(true);}
+  else{$('autoBackup').textContent='자동 백업 다시 연결';abStatus('브라우저를 다시 열어서 한 번 눌러줘야 해요',true);}
+ }catch(e){abStatus('자동 백업 꺼짐');}
+}
+$('autoBackup').onclick=async()=>{
+ try{
+  if(AB.dir&&!AB.ok&&await AB.dir.requestPermission({mode:'readwrite'})==='granted'){AB.ok=true;}
+  else{const h=await showDirectoryPicker({id:'quanah-backup',mode:'readwrite',startIn:'documents'});AB.dir=h;AB.ok=true;await abPut('dir',h);}
+  $('autoBackup').textContent='자동 백업 폴더 바꾸기';await abWrite(true);
+ }catch(e){if(e.name!=='AbortError')abStatus('폴더를 쓸 수 없어요 · '+e.message,true);}
+};
+abInit();
+
+/* ---------- 인벤토리 O/X 지도 ---------- */
+const invKey='quanah-inventory-v1';
+let inv=null,invRef=null,invSel=null,invDrag=null,invFrame=null;
+function loadInv(){
+ try{inv=JSON.parse(localStorage.getItem(invKey)||'null');}catch(e){inv=null;}
+ if(!inv?.img){inv=null;renderInv();return;}
+ const im=new Image();
+ im.onload=()=>{const c=el('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0);invRef={img:im,data:x.getImageData(0,0,c.width,c.height).data,w:c.width,h:c.height};renderInv();};
+ im.src=inv.img;
+}
+function saveInv(){try{localStorage.setItem(invKey,JSON.stringify(inv));}catch(e){$('invStatus').textContent='브라우저 저장 공간이 부족해 인벤토리를 저장하지 못했어요.';}}
+function renderInv(){
+ const has=Boolean(inv&&invRef);
+ $('invView').hidden=!has;$('invClear').hidden=!has;$('invRemove').hidden=!has;$('invXOnly').hidden=!has;
+ if(has)return renderInvMap();
+ if(!has){$('invStatus').textContent=inv?'':'인벤토리를 찍어 두면 스캔한 칸에 O/X가 표시돼요.';return;}
+}
+// 분해 모드: X 칸만 밝게 + 번호(왼→오, 위→아래 순서), 나머지는 어둡게. 분해한 칸을 클릭하면 표시가 지워짐
+function renderInvMap(){
+ const xMode=prefs.invXOnly;
+ $('invXOnly').textContent=xMode?'전체 O/X 보기':'분해할 칸만 보기';
+ $('invXOnly').classList.toggle('primary',xMode);
+ $('invHelp').textContent=xMode?'분해 모드 · 빨간 번호 칸이 분해할 장비예요. 게임에서 분해한 뒤 그 칸을 클릭하면 표시가 지워져요.':'O = 남김 · X = 분해 · ? = 소켓 확인 필요. 칸을 클릭하면 O → X → 비움 순으로 바꿀 수 있어요.';
+ const xs=Object.entries(inv.marks||{}).filter(([,m])=>m.v==='X').map(([i])=>+i).sort((a,b)=>a-b);
+ $('invXList').textContent=xs.length?'분해할 장비 '+xs.length+'개 · 칸 '+xs.map(i=>(Math.floor(i/inv.cols)+1)+'줄 '+(i%inv.cols+1)+'번').join(', '):'';
+ if(xMode){
+  const c=$('invMap'),k=Math.max(1,Math.min(3,480/invRef.w));
+  c.width=Math.round(invRef.w*k);c.height=Math.round(invRef.h*k);
+  const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(invRef.img,0,0,c.width,c.height);
+  x.fillStyle='rgba(0,0,0,.62)';x.fillRect(0,0,c.width,c.height);
+  const cw=c.width/inv.cols,ch=c.height/inv.rows;
+  xs.forEach((idx,n)=>{
+   const cx=(idx%inv.cols)*cw,cy=Math.floor(idx/inv.cols)*ch,s=Math.min(cw,ch);
+   x.drawImage(invRef.img,(idx%inv.cols)*invRef.w/inv.cols,Math.floor(idx/inv.cols)*invRef.h/inv.rows,invRef.w/inv.cols,invRef.h/inv.rows,cx,cy,cw,ch);
+   x.lineWidth=Math.max(3,s*.12);x.strokeStyle='#ff3030';x.strokeRect(cx+x.lineWidth/2,cy+x.lineWidth/2,cw-x.lineWidth,ch-x.lineWidth);
+   const r=s*.22;x.fillStyle='#ff3030';x.beginPath();x.arc(cx+r+2,cy+r+2,r,0,Math.PI*2);x.fill();
+   x.fillStyle='#fff';x.font='bold '+Math.round(r*1.3)+'px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(String(n+1),cx+r+2,cy+r+2.5);
+  });
+  $('invStatus').textContent='분해 모드 · 분해할 장비 '+xs.length+'개';
+  return;
+ }
+ drawInvMarks();
+}
+function drawInvMarks(){
+ const c=$('invMap'),k=Math.max(1,Math.min(3,480/invRef.w));
+ c.width=Math.round(invRef.w*k);c.height=Math.round(invRef.h*k);
+ const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(invRef.img,0,0,c.width,c.height);
+ const cw=c.width/inv.cols,ch=c.height/inv.rows;
+ x.strokeStyle='rgba(255,255,255,.18)';x.lineWidth=1;
+ for(let i=1;i<inv.cols;i++){x.beginPath();x.moveTo(i*cw,0);x.lineTo(i*cw,c.height);x.stroke();}
+ for(let i=1;i<inv.rows;i++){x.beginPath();x.moveTo(0,i*ch);x.lineTo(c.width,i*ch);x.stroke();}
+ const count={O:0,X:0,'?':0};
+ for(const [idx,m] of Object.entries(inv.marks||{})){
+  const cx=(idx%inv.cols)*cw,cy=Math.floor(idx/inv.cols)*ch,s=Math.min(cw,ch);
+  count[m.v]=(count[m.v]||0)+1;
+  x.fillStyle=m.v==='O'?'rgba(30,160,80,.35)':m.v==='X'?'rgba(200,40,40,.45)':'rgba(220,170,30,.4)';
+  x.fillRect(cx+1,cy+1,cw-2,ch-2);
+  x.lineWidth=Math.max(2,s*.09);x.strokeStyle=m.v==='O'?'#5dff95':m.v==='X'?'#ff5a5a':'#ffd34d';
+  const mx=cx+cw/2,my=cy+ch/2,r=s*.3;
+  x.beginPath();
+  if(m.v==='O')x.arc(mx,my,r,0,Math.PI*2);
+  else if(m.v==='X'){x.moveTo(mx-r,my-r);x.lineTo(mx+r,my+r);x.moveTo(mx+r,my-r);x.lineTo(mx-r,my+r);}
+  else{x.font='bold '+Math.round(s*.6)+'px sans-serif';x.fillStyle='#ffd34d';x.textAlign='center';x.textBaseline='middle';x.fillText('?',mx,my);}
+  x.stroke();
+ }
+ $('invStatus').textContent='남김 O '+count.O+' · 분해 X '+count.X+' · 확인 ? '+count['?']+' · 칸 '+inv.cols+'×'+inv.rows;
+}
+// 현재 화면과 찍어 둔 인벤토리를 칸별로 비교해 마우스가 올라간 칸을 찾는다
+function locateCell(tipBox){
+ if(!inv||!invRef)return null;
+ const rx=inv.fx*shot.width,ry=inv.fy*shot.height,rw=inv.fw*shot.width,rh=inv.fh*shot.height;
+ const c=el('canvas');c.width=invRef.w;c.height=invRef.h;
+ const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(shot,rx,ry,rw,rh,0,0,c.width,c.height);
+ const cur=x.getImageData(0,0,c.width,c.height).data,ref=invRef.data;
+ const cw=c.width/inv.cols,ch=c.height/inv.rows,sx=c.width/rw,sy=c.height/rh;
+ const tb=tipBox&&{x0:(tipBox.x0-rx)*sx,x1:(tipBox.x1-rx)*sx,y0:(tipBox.y0-ry)*sy,y1:(tipBox.y1-ry)*sy};
+ let best=-1,bestF=0;
+ for(let r=0;r<inv.rows;r++)for(let col=0;col<inv.cols;col++){
+  const ax=col*cw,ay=r*ch;
+  // 툴팁이 덮은 픽셀은 빼고, 남은 부분에서 바뀐 비율을 본다 (마우스 커서가 있는 칸만 바뀌어 있음)
+  let n=0,hit=0,all=0;
+  for(let yy=Math.floor(ay+ch*.06);yy<ay+ch*.94;yy+=2)for(let xx=Math.floor(ax+cw*.06);xx<ax+cw*.94;xx+=2){
+   all++;
+   if(tb&&xx>=tb.x0&&xx<tb.x1&&yy>=tb.y0&&yy<tb.y1)continue;
+   const i=(yy*c.width+xx)*4;n++;
+   if(Math.abs(cur[i]-ref[i])+Math.abs(cur[i+1]-ref[i+1])+Math.abs(cur[i+2]-ref[i+2])>90)hit++;
+  }
+  const f=n>=all*.25?hit/n:0;
+  if(f>bestF){bestF=f;best=r*inv.cols+col;}
+ }
+ return bestF>=.04?best:null;
+}
+let pendingAssign=null;
+$('invXOnly').onclick=()=>{prefs.invXOnly=!prefs.invXOnly;savePrefs();renderInv();};
+function markCell(idx,v,t){
+ if(!inv||!invRef)return;
+ if(idx===null||idx===undefined){pendingAssign={v,t};$('invStatus').textContent='칸 위치를 못 찾았어요 · 인벤토리 그림에서 방금 장비 칸을 클릭하면 '+v+'로 표시돼요.';return;}
+ pendingAssign=null;
+ (inv.marks||(inv.marks={}))[idx]={v,t};saveInv();renderInv();
+}
+$('invMap').onclick=e=>{
+ if(!inv)return;
+ const r=$('invMap').getBoundingClientRect();
+ const col=Math.floor((e.clientX-r.left)/r.width*inv.cols),row=Math.floor((e.clientY-r.top)/r.height*inv.rows);
+ const idx=row*inv.cols+col;inv.marks=inv.marks||{};
+ if(pendingAssign){inv.marks[idx]=pendingAssign;pendingAssign=null;}
+ else if(prefs.invXOnly){if(inv.marks[idx]?.v==='X')delete inv.marks[idx];else return;}
+ else{const v=inv.marks[idx]?.v;if(!v)inv.marks[idx]={v:'O',t:'직접 표시'};else if(v==='O')inv.marks[idx]={v:'X',t:'직접 표시'};else delete inv.marks[idx];}
+ saveInv();renderInv();
+};
+// 인벤토리 찍기: 지금 공유 화면에서 장비 칸 영역을 드래그로 지정
+function drawInvSetup(){
+ const c=$('invCanvas'),x=c.getContext('2d');
+ x.drawImage(invFrame,0,0);
+ if(!invSel||invSel.w<8||invSel.h<8)return;
+ const cols=Math.max(1,$('invCols').valueAsNumber||1),rows=Math.max(1,$('invRows').valueAsNumber||1);
+ x.strokeStyle='#e5bd70';x.lineWidth=Math.max(2,c.width/600);x.strokeRect(invSel.x,invSel.y,invSel.w,invSel.h);
+ x.strokeStyle='rgba(229,189,112,.7)';x.lineWidth=Math.max(1,c.width/1200);
+ for(let i=1;i<cols;i++){const gx=invSel.x+invSel.w*i/cols;x.beginPath();x.moveTo(gx,invSel.y);x.lineTo(gx,invSel.y+invSel.h);x.stroke();}
+ for(let i=1;i<rows;i++){const gy=invSel.y+invSel.h*i/rows;x.beginPath();x.moveTo(invSel.x,gy);x.lineTo(invSel.x+invSel.w,gy);x.stroke();}
+}
+function invPoint(e){const c=$('invCanvas'),r=c.getBoundingClientRect();return {x:Math.max(0,Math.min(c.width,(e.clientX-r.left)*c.width/r.width)),y:Math.max(0,Math.min(c.height,(e.clientY-r.top)*c.height/r.height))};}
+$('invCanvas').onpointerdown=e=>{invDrag=invPoint(e);$('invCanvas').setPointerCapture(e.pointerId);};
+$('invCanvas').onpointermove=e=>{if(!invDrag)return;const p=invPoint(e);invSel={x:Math.min(p.x,invDrag.x),y:Math.min(p.y,invDrag.y),w:Math.abs(p.x-invDrag.x),h:Math.abs(p.y-invDrag.y)};drawInvSetup();};
+$('invCanvas').onpointerup=$('invCanvas').onpointercancel=()=>{invDrag=null;};
+$('invCols').oninput=$('invRows').oninput=()=>invFrame&&drawInvSetup();
+$('invShot').onclick=()=>{
+ if(!captureVideo?.videoWidth){$('invStatus').textContent='먼저 게임 창을 공유하세요.';return;}
+ const c=$('invCanvas');c.width=captureVideo.videoWidth;c.height=captureVideo.videoHeight;
+ invFrame=el('canvas');invFrame.width=c.width;invFrame.height=c.height;invFrame.getContext('2d').drawImage(captureVideo,0,0);
+ invSel=null;$('invSetup').hidden=false;drawInvSetup();
+ $('invCanvas').scrollIntoView({block:'center'});
+};
+$('invCancel').onclick=()=>{$('invSetup').hidden=true;invFrame=null;};
+$('invSave').onclick=()=>{
+ if(!invSel||invSel.w<20||invSel.h<20){alert('장비 칸 영역을 드래그로 지정하세요.');return;}
+ const cols=$('invCols').valueAsNumber,rows=$('invRows').valueAsNumber;
+ if(!(cols>=1&&rows>=1&&cols<=40&&rows<=40)){alert('가로·세로 칸 수를 1~40으로 입력하세요.');return;}
+ const c=el('canvas');c.width=Math.round(invSel.w);c.height=Math.round(invSel.h);
+ c.getContext('2d').drawImage(invFrame,invSel.x,invSel.y,invSel.w,invSel.h,0,0,c.width,c.height);
+ inv={fx:invSel.x/invFrame.width,fy:invSel.y/invFrame.height,fw:invSel.w/invFrame.width,fh:invSel.h/invFrame.height,cols,rows,img:c.toDataURL('image/png'),marks:{}};
+ saveInv();$('invSetup').hidden=true;invFrame=null;loadInv();
+};
+$('invClear').onclick=()=>{if(inv&&confirm('인벤토리의 O/X 표시를 모두 지울까요?')){inv.marks={};saveInv();renderInv();}};
+$('invRemove').onclick=()=>{if(confirm('찍어 둔 인벤토리를 삭제할까요?')){inv=null;invRef=null;try{localStorage.removeItem(invKey);}catch(e){}renderInv();}};
+loadInv();
+
+
+document.addEventListener('keydown',event=>{
+ if(event.key==='F3'){event.preventDefault();if(!event.repeat)undoAutoAdd();return;}
+ if(event.key!=='F2')return;
+ event.preventDefault();
+ if(!captureVideo){$('captureStatus').textContent='먼저 "게임 창 공유"를 눌러 게임 창을 선택하세요.';return;}
+ if(!event.repeat)captureVideoFrame();
+});
+async function readImage(file){
+ if(!file||captureBusy)return;
+ try{const image=await createImageBitmap(file);try{fillShot(image,image.width,image.height);}finally{image.close();}}
+ catch(error){$('captureStatus').textContent='이미지를 열 수 없어요.';}
+}
+$('captureFile').onchange=()=>{readImage($('captureFile').files[0]);$('captureFile').value='';};
+document.addEventListener('paste',event=>{
+ const file=[...event.clipboardData.files].find(f=>f.type.startsWith('image/'));
+ if(file){event.preventDefault();readImage(file);}
+});
+function framePoint(event){
+ const r=shot.getBoundingClientRect();
+ return {x:Math.round(Math.max(0,Math.min(shot.width,(event.clientX-r.left)*shot.width/r.width))),y:Math.round(Math.max(0,Math.min(shot.height,(event.clientY-r.top)*shot.height/r.height)))};
+}
+shot.onpointerdown=e=>{if(!captureBusy){dragStart=framePoint(e);shot.setPointerCapture(e.pointerId);}};
+shot.onpointermove=e=>{
+ if(!dragStart)return;
+ const p=framePoint(e);
+ selectRegion({x:Math.min(p.x,dragStart.x),y:Math.min(p.y,dragStart.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)});
+};
+shot.onpointerup=shot.onpointercancel=()=>{dragStart=null;};
+if(!navigator.mediaDevices?.getDisplayMedia||window.top!==window){
+ const w=$('envWarn');w.hidden=false;
+ w.textContent='이 창에서는 화면 공유를 쓸 수 없어요(미리보기 창일 수 있어요). 파일을 크롬이나 엣지로 직접 열어 주세요.';
+}else $('captureStatus').textContent='준비 완료 · "게임 창 공유"를 누르고 게임 창을 고른 뒤, 툴팁을 띄우고 이 페이지를 클릭한 상태에서 F2를 누르세요.';
+$('readRegion').onclick=()=>recognizeFrame(region?.w>30&&region?.h>30?region:null);
+$('useCapture').onclick=()=>{
+ if(!captureResult||captureBusy)return;
+ if((editing||selected.length)&&!confirm('장비 등록란의 현재 입력을 캡처 결과로 바꿀까요?'))return;
+ slot=captureResult.slot;resetEntry();
+ selected=captureResult.options.map(o=>o.id);
+ $('gearName').value=captureResult.name;
+ capturedNames=captureResult.options.map(o=>o.name);
+ renderEntry();
+ $('notice').textContent='부위와 스킬 '+selected.length+'줄을 채웠어요. 부위가 맞는지 확인하고 스타포스를 입력한 뒤 장비 추가를 누르세요.';
+ $('entryTitle').scrollIntoView({block:'center'});
+};
+
+</script>
+</body>
+</html>
