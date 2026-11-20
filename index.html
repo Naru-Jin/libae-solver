@@ -1466,35 +1466,47 @@ function allSockItems(){
   .map(g=>({id:g.id,slot:g.slot,sockets:g.sockets,job:g.job||null,name:g.name,fromGear:true,lines:g.lines.length}));
  return [...state.sock,...fromGear];
 }
+// 소켓 조합 점수 (앞 항목일수록 훨씬 중요):
+//  1) 채운 부위 수  2) 흰색 포함 부위 4개(필수)  3) 흰색 낭비 없음(한 장비에 흰색 2개↑, 흰색 장비 5개↑)
+//  4) 흰색 뺀 나머지 보석의 색 개수를 최대한 고르게 (STR 기준 14개 → 빨5·검5·초4 같은 식)  5) 한 장비 안에서 색 섞기
+const SOCK_W={filled:1e9,prism:1e8,waste:1e7,spread:1e5,sq:1e3,distinct:10};
+function sockScore(filled,prismItems,wasted,distinct,cnt){
+ const extra=Math.max(0,prismItems-4);
+ const vals=prefs.sockColors.filter(c=>c!=='prismatic').map(c=>cnt[c]||0);
+ const spread=vals.length?Math.max(...vals)-Math.min(...vals):0;
+ const mean=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+ const sq=vals.reduce((s,v)=>s+(v-mean)**2,0);
+ return {score:filled*SOCK_W.filled+Math.min(prismItems,4)*SOCK_W.prism-(wasted+extra)*SOCK_W.waste-spread*SOCK_W.spread-sq*SOCK_W.sq+distinct*SOCK_W.distinct,spread,extra};
+}
 function solveSockets(){
  const valid=allSockItems().filter(sockValid);
  const bySlot=slots.map((_,slot)=>{
   const uniq=new Map();
   for(const s of valid.filter(s=>s.slot===slot)){const k=sockSig(s.sockets);if(!uniq.has(k))uniq.set(k,s);}
-  const c=[...uniq.values()].map(s=>({s,...sockLocal(s)}));
-  // 부위당 후보는 흰색 있는 것·없는 것 각각 상위 몇 개만 (계산량 제한)
-  const rank=(a,b)=>b.distinct-a.distinct||a.wasted-b.wasted;
-  return [...c.filter(x=>x.prism).sort(rank).slice(0,5),...c.filter(x=>!x.prism).sort(rank).slice(0,5)];
+  return [...uniq.values()].map(s=>({s,...sockLocal(s)}));
  });
+ // 부위별로 차례로 고르며 '흰색 장비 수 + 색별 개수'가 같은 경우 중 가장 좋은 것만 남김 → 모든 조합을 본 것과 같은 결과를 빠르게
+ const COLS=SOCK_ALL.filter(c=>c!=='prismatic');
+ let states=new Map([['0|'+COLS.map(()=>0).join(','),{filled:0,prism:0,wasted:0,distinct:0,cnt:{},pick:Array(6).fill(null)}]]);
+ for(let i=0;i<6;i++){
+  const next=new Map();
+  for(const st of states.values())for(const opt of [null,...bySlot[i]]){
+   const cnt={...st.cnt};
+   if(opt)for(const c of opt.rest)cnt[c]=(cnt[c]||0)+1;
+   const n={filled:st.filled+(opt?1:0),prism:st.prism+(opt?opt.prism:0),wasted:st.wasted+(opt?opt.wasted:0),distinct:st.distinct+(opt?opt.distinct:0),cnt,pick:st.pick.slice()};
+   n.pick[i]=opt;
+   const key=n.prism+'|'+COLS.map(c=>cnt[c]||0).join(',');
+   const add=n.filled*SOCK_W.filled-n.wasted*SOCK_W.waste+n.distinct*SOCK_W.distinct;
+   const old=next.get(key);
+   if(!old||add>old.filled*SOCK_W.filled-old.wasted*SOCK_W.waste+old.distinct*SOCK_W.distinct)next.set(key,n);
+  }
+  states=next;
+ }
  let best=null;
- const pick=Array(6).fill(null);
- const evalPick=()=>{
-  let filled=0,prismItems=0,wasted=0,distinct=0;const cnt={};
-  for(const p of pick){if(!p)continue;filled++;prismItems+=p.prism;wasted+=p.wasted;distinct+=p.distinct;for(const c of p.rest)cnt[c]=(cnt[c]||0)+1;}
-  const vals=prefs.sockColors.filter(c=>c!=='prismatic').map(c=>cnt[c]||0);
-  const spread=vals.length?Math.max(...vals)-Math.min(...vals):0;
-  // 흰색 장비는 4부위까지만 이득, 넘으면 그 흰색 소켓은 낭비로 계산
-  const extra=Math.max(0,prismItems-4);
-  const score=filled*1000+Math.min(prismItems,4)*100-(wasted+extra)*60+distinct*10-spread*3;
-  if(!best||score>best.score)best={score,pick:pick.slice(),filled,prismItems:Math.min(prismItems,4),extra,wasted,cnt};
- };
- const go=i=>{
-  if(i===6){evalPick();return;}
-  pick[i]=null;go(i+1);
-  for(const c of bySlot[i]){pick[i]=c;go(i+1);}
-  pick[i]=null;
- };
- go(0);
+ for(const st of states.values()){
+  const sc=sockScore(st.filled,st.prism,st.wasted,st.distinct,st.cnt);
+  if(!best||sc.score>best.score)best={score:sc.score,pick:st.pick,filled:st.filled,prismItems:Math.min(st.prism,4),extra:sc.extra,wasted:st.wasted,cnt:st.cnt,spread:sc.spread};
+ }
  return {best,valid};
 }
 function renderSockets(){
@@ -1521,6 +1533,19 @@ function renderSockets(){
  }
  sum.append(el('div','보석 '+gemTotal+' / 18개 세팅 가능','gem-total'));
  res.append(sum);
+ // 색 비율: 흰색 4개는 고정, 나머지를 쓸 수 있는 색끼리 최대한 고르게
+ const useCols=prefs.sockColors.filter(c=>c!=='prismatic');
+ if(useCols.length>1&&best.filled){
+  const vals=useCols.map(c=>gems[c]||0),others=vals.reduce((a,b)=>a+b,0);
+  const ideal=others%useCols.length?1:0,spread=Math.max(...vals)-Math.min(...vals);
+  const base=Math.floor(others/useCols.length),extraN=others%useCols.length;
+  const idealText=useCols.map((c,i)=>SOCK_SHORT[c]+(base+(i<extraN?1:0))).join(' ');
+  const line=el('p',null,'compact');line.style.margin='-4px 0 10px';
+  line.append(el('b','색 비율 '),document.createTextNode('흰색 '+(gems.prismatic||0)+'개 고정 · 나머지 '+others+'개 = '+useCols.map((c,i)=>SOCK_SHORT[c]+vals[i]).join(' ')+' '));
+  const tag=el('span',spread<=ideal?'✓ 최대한 고르게 맞춤':'가진 장비로는 차이 '+spread+'개가 최선 (이상적: '+idealText+' 같은 식)');
+  tag.style.color=spread<=ideal?'var(--ok)':'var(--warn)';tag.style.fontWeight='700';
+  line.append(tag);res.append(line);
+ }
  const chosenIds=new Set();
  let prismLeft=4-best.prismItems;
  for(const i of SLOT_ORDER){
