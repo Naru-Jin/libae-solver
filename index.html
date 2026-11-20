@@ -283,7 +283,7 @@ function cleanState(data) {
  if(!Array.isArray(data?.gear)||!Array.isArray(data?.custom)) throw Error('올바른 계산기 백업 파일을 선택하세요.');
  const gear=data.gear.map(g=>{
   if(!Number.isInteger(g.slot)||!slots[g.slot]||!Array.isArray(g.lines)||g.lines.length>3||g.lines.some(l=>!Object.hasOwn(labels,l))||new Set(g.lines.filter(l=>l!=='other')).size!==g.lines.filter(l=>l!=='other').length||!Number.isInteger(g.stars)||g.stars<0||g.stars>30) throw Error('백업에 올바르지 않은 장비가 있습니다.');
-  return {id:uid(),slot:g.slot,lines:g.lines,stars:g.stars,name:String(g.name||'').slice(0,80),optionNames:Array.isArray(g.optionNames)?g.lines.map((_,i)=>String(g.optionNames[i]||'').slice(0,140)):[],sockets:Array.isArray(g.sockets)?g.sockets.slice(0,3).map(String):null,job:typeof g.job==='string'?g.job:null};
+  return {id:uid(),slot:g.slot,lines:g.lines,stars:g.stars,name:String(g.name||'').slice(0,80),optionNames:Array.isArray(g.optionNames)?g.lines.map((_,i)=>String(g.optionNames[i]||'').slice(0,140)):[],sockets:Array.isArray(g.sockets)?g.sockets.slice(0,3).map(String):null,job:typeof g.job==='string'?g.job:null,noSock:!!g.noSock};
  });
  const custom=data.custom.map(p=>({id:uid(),oldId:p.id,name:String(p.name||'내 목표').slice(0,80),note:String(p.note||'').slice(0,180),goal:cleanGoal(p.goal)}));
  const active=custom.find(p=>p.oldId===data.active)?.id || '';
@@ -364,7 +364,8 @@ $('saveGear').onclick=()=>{
  const gear={id:editing||uid(),slot,lines:[...selected],optionNames:selected.map((_,i)=>capturedNames[i]||''),stars,name:$('gearName').value.trim()};
  const junk=window.junkOf?junkOf(gear.lines,gear.optionNames):[];
  if(junk.length){$('notice').textContent='필요 없는 스킬('+junk.join('·')+')이 있어서 보유 장비에 넣지 않았어요. (캡처 패널 설정에서 바꿀 수 있어요)';return;}
- if(editing)state.gear=state.gear.map(g=>g.id===editing?gear:g);
+ // 수정할 때는 원래 장비의 소켓·직업 정보를 그대로 유지
+ if(editing)state.gear=state.gear.map(g=>g.id===editing?{...gear,sockets:g.sockets??null,job:g.job??null,noSock:!!g.noSock}:g);
  else state.gear.push(gear);
  const msg=editing?'장비를 수정했습니다.':'장비를 추가했습니다.';resetEntry();$('notice').textContent=msg;refresh();
 };
@@ -1126,7 +1127,7 @@ function addScanned(gear){
    // 어떤 장비와 같은지 보여줌 (스킬 순서는 달라도 같은 3줄이면 18줄 계산에서 똑같은 장비)
    dupWith='같은 스킬 조합이 이미 있음 → '+slots[same.slot]+': '+same.lines.map(l=>labels[l]).join('·')+(same.sockets&&same.sockets.length?' (소켓 '+sockText(same.sockets)+')':'');
    // 예전에 소켓 없이 저장된 장비면 이번에 읽은 소켓·직업 정보를 채워 넣는다
-   if((!same.sockets||same.sockets.length!==3)&&gear.sockets?.length===3){same.sockets=gear.sockets.slice(0,3);filled=true;}
+   if(!same.noSock&&(!same.sockets||same.sockets.length!==3)&&gear.sockets?.length===3){same.sockets=gear.sockets.slice(0,3);filled=true;}
    if(!same.job&&gear.job){same.job=gear.job;filled=true;}
    if(filled)refresh();
   }
@@ -1622,11 +1623,15 @@ function renderSockets(){
    const row=el('div',null,'entry row spread'),l=el('div',null,'row');
    const editSock=next=>{const t=s.fromGear?state.gear.find(x=>x.id===s.id):state.sock.find(x=>x.id===s.id);if(t){t.sockets=next;refresh();}};
    l.append(sockChips(s.sockets,editSock),el('span',(chosenIds.has(s.id)?'★ 조합에 사용':sockValid(s)?'예비':'✕ 조건 안 맞음')+(s.job?' · '+JOB_KO[s.job]:' · 직업 미확인')+(s.fromGear?' · 보유 장비('+s.lines+'줄)':''),'muted compact'));
-   // 보유 장비에서 온 것은 스킬 장비이기도 하므로 여기서 지우지 않고, 직업만 고칠 수 있게
+   // 보유 장비에서 온 것은 스킬 장비이기도 하므로 장비 자체는 지우지 않고, 직업 고치기·소켓 빼기만
    if(s.fromGear){
     const sel=el('select');sel.append(...[['','직업 미확인'],...Object.entries(JOB_KO)].map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
     sel.value=s.job||'';sel.onchange=()=>{const g0=state.gear.find(x=>x.id===s.id);if(g0){g0.job=sel.value||null;refresh();}};
-    row.append(l,sel);
+    // 소켓 빼기: 소켓 정보만 지우고 스킬 장비(18줄 계산용)는 보유 장비에 그대로 둠
+    const rm=button('소켓 빼기',()=>{const g0=state.gear.find(x=>x.id===s.id);if(g0){g0.sockets=null;g0.noSock=true;refresh();}});
+    rm.title='소켓 목록에서만 빼요. 스킬 장비는 보유 장비에 그대로 남아요.';
+    const act=el('div',null,'row');act.append(sel,rm);
+    row.append(l,act);
    }else row.append(l,button('삭제',()=>{state.sock=state.sock.filter(x=>x.id!==s.id);refresh();}));
    g.append(row);
   }
