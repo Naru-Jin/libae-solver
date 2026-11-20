@@ -123,6 +123,17 @@ progress::-moz-progress-bar{background:var(--accent);border-radius:99px}
 .skillgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}.skillgrid label{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:12.5px}.skillgrid input{width:52px;padding:4px 6px}
 .preset{padding:8px 0;border-bottom:1px solid var(--line)}.preset p{margin:3px 0}
 footer{margin-top:24px;text-align:center;color:var(--muted)}
+/* 왼쪽(장비 등록·보유 장비)과 오른쪽(최적 조합·내 목표)을 따로 쌓음 → 한쪽을 접으면 그쪽 아래 카드가 바로 올라옴 */
+.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:none;align-items:start;gap:16px}
+.grid>.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+section[data-fold].folded>:not(:first-child){display:none!important}
+section[data-fold].folded{padding-bottom:14px}
+section[data-fold].folded>:first-child{margin-bottom:0}
+section[data-fold].folded>:first-child h2,section[data-fold].folded>h2{margin-bottom:0}
+.fold-btn{margin-left:auto;font-size:12px;padding:4px 10px;color:var(--muted);font-weight:600;white-space:nowrap}
+.fold-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fold-head h2{margin-bottom:0}
 .gem-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fbf8f2}
 .gem-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:13px}
 .gem-stat b{font-size:15px;margin-left:2px}
@@ -145,7 +156,7 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 <div class="eyebrow">MapleStory · Quanah · Libae's Supercharged</div>
 <h1>리베 장비 계산기</h1>
 <p class="lead">툴팁을 자동으로 읽어서 <b>18줄 스킬 조합</b>과 <b>소켓 조합</b>을 한 번에 맞춰요.</p>
-<div class="hero-actions"><button type="button" class="primary" onclick="document.getElementById('capturePanel').scrollIntoView({behavior:'smooth'})">스캔 시작하기</button><button type="button" onclick="document.getElementById('sockPanel').scrollIntoView({behavior:'smooth'})">소켓 조합 보기</button><button type="button" onclick="document.getElementById('solution').scrollIntoView({behavior:'smooth'})">18줄 조합 보기</button></div>
+<div class="hero-actions"><button type="button" class="primary" data-jump="capturePanel">스캔 시작하기</button><button type="button" data-jump="sockPanel">소켓 조합 보기</button><button type="button" data-jump="solution">18줄 조합 보기</button><button type="button" data-jump="gearPanel">보유 장비 보기</button></div>
 </div>
 <div class="hero-side">
 <div class="side-title">데이터 관리</div>
@@ -154,7 +165,7 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 <p class="compact muted" style="margin:6px 0 0">장비 목록은 이 브라우저에만 저장돼요. 다른 기기로 옮길 땐 백업을 쓰세요.</p>
 </div>
 </header>
-<section class="card" id="capturePanel">
+<section class="card" id="capturePanel" data-fold="capture">
 <div class="card-head"><h2>게임 툴팁 스캔</h2><span class="tag">GMS 영어 툴팁</span></div>
 <noscript><p style="color:#b4322a;font-weight:700">이 창에서는 스크립트가 꺼져 있어 아무 기능도 동작하지 않아요. 파일을 크롬이나 엣지로 직접 여세요.</p></noscript>
 <p id="envWarn" style="color:#b4322a;font-weight:700" hidden></p>
@@ -193,16 +204,19 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 </div>
 </section>
 
-<section class="card" id="sockPanel" style="margin-bottom:14px">
+<section class="card" id="sockPanel" data-fold="sock" style="margin-bottom:14px">
 <div class="row spread"><h2>최적 소켓 조합 <span id="sockTotal" class="muted"></span></h2><label class="compact">주 스탯 <select id="myStat"></select></label></div>
 <p class="muted compact">공략 기준: <b>흰색(무지개)+2색 4부위 · 3색 2부위</b>. 한 장비 안에서는 색을 섞을수록 좋아요(빨빨빨보다 빨검초). 스킬은 같은 부위 소켓 장비로 전승되므로 소켓 장비의 스킬 줄은 상관없고, 소켓 장비는 내 주 스탯을 쓰는 직업군 장비여야 해요(STR 전사·해적, DEX 궁수·해적, INT 마법사, LUK 도적). 자동 스캔 때 조건에 맞는 소켓 장비는 여기에 자동으로 들어와요.</p>
 <div id="sockResult"></div>
 <div class="row compact" style="margin:10px 0 4px">직접 추가 <select id="sockSlot"></select><select id="sockC1"></select><select id="sockC2"></select><select id="sockC3"></select><button id="sockAdd" type="button">추가</button></div>
-<p class="compact muted" style="margin:12px 0 0">소켓 색이 실제와 다르면 목록에서 색 칸을 눌러 바꿀 수 있어요 (누를 때마다 다음 색).</p>
+<details id="sockListBox" class="settings"><summary>소켓 장비 목록 <span id="sockListCount" class="muted"></span></summary>
+<p class="compact muted" style="margin:4px 0 0">소켓 색이 실제와 다르면 색 칸을 눌러 바꿀 수 있어요 (누를 때마다 다음 색).</p>
 <div id="sockList"></div>
+</details>
 </section>
 <div class="grid">
-<section class="card">
+<div class="col">
+<section class="card" id="entryPanel" data-fold="entry">
 <h2 id="entryTitle">장비 등록</h2>
 <div id="entrySlots" class="row slots"></div>
 <div class="muted compact">장비에 붙은 옵션을 최대 3줄 선택하세요. 목표 외 옵션은 ‘기타’로 입력할 수 있어요.</div>
@@ -211,15 +225,17 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 <div class="row spread"><div class="row"><label>스타포스 <input id="stars" type="number" min="0" max="30" value="0" style="width:65px"> ★</label><input id="gearName" maxlength="80" placeholder="장비 이름 · 선택" aria-label="장비 이름"></div><div class="row"><button id="cancel" hidden>취소</button><button id="saveGear" class="primary">장비 추가</button></div></div>
 <p id="notice" role="status"></p>
 </section>
-<section class="card">
+<section class="card" id="gearPanel" data-fold="gear">
 <div class="row spread"><h2>보유 장비 · Your 3L Gear <span id="total" class="muted"></span></h2><div class="row"><button id="junkGear" type="button" title="보스 데미지·데미지·방어율 무시 등 필요 없는 스킬이 붙은 장비 지우기">필요 없는 스킬 정리</button><button id="dedupeGear" type="button">중복 정리</button><button id="pruneGear" type="button" disabled>선택 장비 외 모두 삭제</button></div></div>
 <div id="inventory"></div>
 </section>
-<section class="card" id="solution">
+</div>
+<div class="col">
+<section class="card" id="solution" data-fold="best">
 <div class="row spread"><h2>최적 조합 · Best Set</h2><button id="solve" class="primary">조합 계산</button></div>
 <div id="result" aria-live="polite"></div>
 </section>
-<section class="card" id="myGoals">
+<section class="card" id="myGoals" data-fold="goals">
 <h2>내 목표</h2>
 <div id="presets"></div>
 <details id="editor" style="margin-top:10px"><summary>목표 추가 · 편집</summary>
@@ -230,6 +246,7 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 <p id="presetStatus" role="status" class="compact warn"></p>
 </details>
 </section>
+</div>
 </div>
 <footer class="muted compact">참고 <a href="https://freehtmlhost.com/3l-set-solver/" target="_blank" rel="noopener">영어 원본 3L Set Solver</a> · <a href="https://www.nexon.com/maplestory/news/update/47132/v-272-maplayer-one-patch-notes" target="_blank" rel="noopener">GMS v.272 공지</a></footer>
 </main>
@@ -1563,6 +1580,7 @@ function renderSockets(){
  res.append(el('p',(spare?'예비 소켓 장비 '+spare+'개 (조합에 안 쓰임 · 더 좋은 게 있으면 분해 가능)':'')+(bad?(spare?' · ':'')+'조건에 안 맞는 소켓 장비 '+bad+'개 (다른 직업군이거나 쓸 수 없는 색)':''),'muted compact'));
  // 목록
  const list=$('sockList');list.replaceChildren();
+ $('sockListCount').textContent='('+all.length+'개)';
  for(const i of SLOT_ORDER){
   const items=all.filter(s=>s.slot===i);if(!items.length)continue;
   const g=el('div',null,'inventory-group');g.append(el('h3',slots[i]+' · '+items.length+'개'));
@@ -1882,6 +1900,30 @@ $('useCapture').onclick=()=>{
  $('entryTitle').scrollIntoView({block:'center'});
 };
 
+
+/* ---------- 카드 접기 ---------- */
+(function(){
+ const KEY='quanah-folds';
+ let folds={};try{folds=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
+ const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(folds));}catch(e){}};
+ const setFold=(sec,on)=>{
+  sec.classList.toggle('folded',on);
+  const b=sec.querySelector(':scope>.fold-head .fold-btn,:scope>:first-child .fold-btn');
+  if(b){b.textContent=on?'펼치기 ▾':'접기 ▴';b.setAttribute('aria-expanded',String(!on));}
+  folds[sec.dataset.fold]=on;save();
+ };
+ for(const sec of document.querySelectorAll('section[data-fold]')){
+  let head=sec.firstElementChild;
+  // 제목(h2)만 있는 카드는 제목 줄을 만들어 버튼을 넣음
+  if(head.tagName==='H2'){const wrap=document.createElement('div');wrap.className='fold-head';sec.insertBefore(wrap,head);wrap.append(head);head=wrap;}
+  const b=document.createElement('button');b.type='button';b.className='fold-btn';
+  b.onclick=()=>setFold(sec,!sec.classList.contains('folded'));
+  head.append(b);
+  setFold(sec,!!folds[sec.dataset.fold]);
+ }
+ // 위쪽 바로가기 버튼: 접혀 있으면 펼친 뒤 이동
+ for(const b of document.querySelectorAll('[data-jump]'))b.onclick=()=>{const t=document.getElementById(b.dataset.jump);if(!t)return;if(t.classList.contains('folded'))setFold(t,false);t.scrollIntoView({behavior:'smooth'});};
+})();
 </script>
 </body>
 </html>
