@@ -138,6 +138,9 @@ section[data-fold].folded>:first-child h2,section[data-fold].folded>h2{margin-bo
 #celebrate.show{transform:translate(-50%,0)}
 #celebrate strong{font-size:20px;letter-spacing:-.02em}#celebrate span{font-size:13px;opacity:.9}
 @media(prefers-reduced-motion:reduce){#celebrate{transition:none}}
+.odds{margin:4px 0 14px;padding:10px 12px;border:1px solid var(--accent-line);border-radius:8px;background:var(--accent-soft)}
+.odds strong{font-size:13px}.odds .odds-num{font-weight:800;color:#6a3410}
+.odds p{margin:4px 0 8px}.odds .chip{background:#fff}
 .gem-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fbf8f2}
 .gem-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:13px}
 .gem-stat b{font-size:15px;margin-left:2px}
@@ -469,6 +472,34 @@ function solveGear(gear,goal){
  visit(0,0,0);
  return {...best,found:Object.fromEntries(ids.map((id,i)=>[id,best.counts[i]]))};
 }
+// 다음에 얻을 3줄 장비 1개로 목표를 완성할 수 있는 경우의 수.
+// 새 장비 = 6부위 × (스킬 13종 중 서로 다른 3줄) = 1,716가지가 똑같은 확률로 나온다고 가정.
+// 부위 s에 새 장비를 넣을 때, 나머지 5부위 조합이 남기는 '모자란 줄'(목표 - 보유)이 서로 다른 스킬 3개 이하이고
+// 새 장비의 3줄이 그걸 모두 포함하면 완성 → 부위별로 '모자란 줄 묶음'만 모아서 빠르게 셈
+function nextItemOdds(gear,goal){
+ const ids=Object.keys(goal),G=ids.map(id=>goal[id]),pool=skills.map(s=>s[0]);
+ const vec=lines=>ids.map((id,i)=>Math.min(G[i],lines.filter(l=>l===id).length));
+ const bySlot=Array.from({length:6},(_,s)=>{const m=new Map();for(const g of gear.filter(g=>g.slot===s)){const v=vec(g.lines);m.set(v.join(),v);}return [...m.values()];});
+ const trios=[];for(let a=0;a<pool.length;a++)for(let b=a+1;b<pool.length;b++)for(let c=b+1;c<pool.length;c++)trios.push([pool[a],pool[b],pool[c]]);
+ const perSlot=[];let n=0;
+ for(let s=0;s<6;s++){
+  // 나머지 5부위에서 만들 수 있는 (목표로 자른) 합 → 중복 제거하며 누적
+  let sums=new Map([[G.map(()=>0).join(),G.map(()=>0)]]);
+  for(let i=0;i<6;i++){
+   if(i===s)continue;
+   const opts=[G.map(()=>0),...bySlot[i]],next=new Map();
+   for(const v of sums.values())for(const o of opts){const w=v.map((x,k)=>Math.min(G[k],x+o[k]));next.set(w.join(),w);}
+   sums=next;
+  }
+  // 모자란 줄 묶음: 각 스킬이 1줄 이하로 모자라고, 모자란 스킬이 3개 이하인 것만 (새 장비 3줄로 채울 수 있는 것)
+  const needs=[];
+  for(const v of sums.values()){const d=G.map((g,k)=>g-v[k]);if(d.every(x=>x<=1)){const set=ids.filter((_,k)=>d[k]);if(set.length<=3)needs.push(set);}}
+  let cnt=0;
+  if(needs.length)for(const t of trios)if(needs.some(set=>set.every(x=>t.includes(x))))cnt++;
+  perSlot.push(cnt);n+=cnt;
+ }
+ return {n,total:6*trios.length,perSlot};
+}
 let worker=null, chosenIds=null;
 $('pruneGear').onclick=()=>{
  if(!chosenIds?.size)return;
@@ -489,6 +520,25 @@ function displayResult(result,goal){
  const summary=el('div',null,'row spread');summary.append(el('span',result.score+' / '+total+'줄','metric'),el('strong','합계 '+result.stars+'★'));
  const bar=el('progress');bar.max=total;bar.value=result.score;bar.setAttribute('aria-label','목표 달성률');
  out.append(summary,bar,el('p',missing?'미등록 부위 '+missing+'개':result.score===total?'모든 목표를 달성했어요.':'목표 '+(total-result.score)+'줄이 남았어요.','muted compact'));
+ // 아직 미완성이면: 다음 3줄 장비 1개로 완성되는 경우의 수와 확률
+ if(result.score<total){
+  try{
+   const odds=nextItemOdds(state.gear,goal);
+   const box=el('div',null,'odds');
+   const p=odds.n/odds.total;
+   const head=el('div',null,'row spread');
+   head.append(el('strong','다음 3줄 장비 1개로 완성될 경우의 수'),el('span',odds.n+' / '+odds.total.toLocaleString()+'가지 · '+(p*100).toFixed(2)+'%','odds-num'));
+   box.append(head);
+   if(odds.n){
+    const exp=Math.round(1/p),p30=1-Math.pow(1-p,30);
+    box.append(el('p','평균 3줄 장비 약 '+exp+'개에 한 번 · 30개 더 모으면 적어도 '+Math.round(p30*100)+'% (모을수록 경우의 수가 늘어서 실제로는 더 빨라요)','compact muted'));
+    const chips=el('div',null,'row');chips.style.gap='6px';
+    [0,5,1,3,2,4].forEach(i=>{const c=el('span',slots[i]+' '+odds.perSlot[i],'chip');if(odds.perSlot[i]===Math.max(...odds.perSlot))c.style.cssText='background:var(--accent-soft);border-color:var(--accent-line);font-weight:700;color:#6a3410';chips.append(c);});
+    box.append(el('div','부위별 (많을수록 그 부위에서 나올 확률이 높아요)','compact muted'),chips);
+   }else box.append(el('p','지금 장비로는 1개만 더 얻어서는 완성이 안 돼요. 2개 이상 더 필요해요.','compact muted'));
+   out.append(box);
+  }catch(e){}
+ }
  const matches=el('div',null,'goal-meter');
  for(const [id,goalCount] of Object.entries(goal)){
   const row=el('div',null,'row spread goal-row'), boxes=el('span',null,'goal-boxes');
