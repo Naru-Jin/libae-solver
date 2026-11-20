@@ -123,6 +123,11 @@ progress::-moz-progress-bar{background:var(--accent);border-radius:99px}
 .skillgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}.skillgrid label{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:12.5px}.skillgrid input{width:52px;padding:4px 6px}
 .preset{padding:8px 0;border-bottom:1px solid var(--line)}.preset p{margin:3px 0}
 footer{margin-top:24px;text-align:center;color:var(--muted)}
+.gem-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fbf8f2}
+.gem-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:13px}
+.gem-stat b{font-size:15px;margin-left:2px}
+.gem-dot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.gem-total{margin-left:auto;font-size:13px;font-weight:700;color:var(--ink2)}
 ::selection{background:#f6cfb3}
 
 @media(max-width:860px){.hero{grid-template-columns:1fr;padding-top:24px}.hero-side{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:14px}.steps{grid-template-columns:1fr}.steps li+li{border-left:0;border-top:1px solid var(--line)}.file-pick{margin-left:0}}
@@ -193,6 +198,7 @@ footer{margin-top:24px;text-align:center;color:var(--muted)}
 <p class="muted compact">공략 기준: <b>흰색(무지개)+2색 4부위 · 3색 2부위</b>. 한 장비 안에서는 색을 섞을수록 좋아요(빨빨빨보다 빨검초). 스킬은 같은 부위 소켓 장비로 전승되므로 소켓 장비의 스킬 줄은 상관없고, 소켓 장비는 내 주 스탯을 쓰는 직업군 장비여야 해요(STR 전사·해적, DEX 궁수·해적, INT 마법사, LUK 도적). 자동 스캔 때 조건에 맞는 소켓 장비는 여기에 자동으로 들어와요.</p>
 <div id="sockResult"></div>
 <div class="row compact" style="margin:10px 0 4px">직접 추가 <select id="sockSlot"></select><select id="sockC1"></select><select id="sockC2"></select><select id="sockC3"></select><button id="sockAdd" type="button">추가</button></div>
+<p class="compact muted" style="margin:12px 0 0">소켓 색이 실제와 다르면 목록에서 색 칸을 눌러 바꿀 수 있어요 (누를 때마다 다음 색).</p>
 <div id="sockList"></div>
 </section>
 <div class="grid">
@@ -847,7 +853,7 @@ function saveRecognizedGear(gear){
  // 안전장치: 필요 없는 스킬이 붙은 장비는 어떤 경로로도 보유 장비에 넣지 않음
  if(typeof junkOf==='function'&&junkOf(gear.options.map(o=>o.id),gear.options.map(o=>o.name)).length)return null;
  const id=uid();
- state.gear.push({id,slot:gear.slot,lines:gear.options.map(o=>o.id),optionNames:gear.options.map(o=>o.name),stars:0,name:gear.name,sockets:gear.sockets||null,job:gear.job||null});
+ state.gear.push({id,slot:gear.slot,lines:gear.options.map(o=>o.id),optionNames:gear.options.map(o=>o.name),stars:0,name:gear.name,sockets:gear.sockets&&!gear.sockets.unsure?gear.sockets.slice(0,3):null,job:gear.job||null});
  lastAutoAddedId=id;refresh();return id;
 }
 let lastSockAddedId=null;
@@ -945,7 +951,7 @@ async function recognizeFrame(crop=null,auto=false){
    try{best.sockets=detectSockets(best.tipRect);}catch(e){best.sockets=null;}
    try{best.cell=locateCell(best.tipBox);}catch(e){best.cell=null;}
    raw+='툴팁 찾기: '+(iconTip?'아이콘 상자 ('+Math.round(iconTip.icon.x)+','+Math.round(iconTip.icon.y)+' 크기 '+iconTip.icon.L+')':panel?'툴팁 패널':'못 찾음 → 전체 화면')+' · 화면 '+shot.width+'×'+shot.height+'\n';
-   raw+='소켓: '+(best.sockets?sockText(best.sockets):'못 찾음')+' · 직업군: '+(JOB_KO[best.job]||'못 찾음')+' · 인벤토리 칸: '+(best.cell??'못 찾음')+'\n';
+   raw+='소켓: '+(best.sockets?sockText(best.sockets)+(best.sockets.unsure?' (확실하지 않음)':''):'못 찾음')+' · 직업군: '+(JOB_KO[best.job]||'못 찾음')+' · 인벤토리 칸: '+(best.cell??'못 찾음')+'\n';
   }
   $('rawText').textContent=raw;
   const gear=buildGear(best,auto);
@@ -1152,31 +1158,34 @@ function findIconBoxes(rect,minL=40,firstOnly=true){
   for(let x=0;x<=w;x++){
    if(x<w){const i=(y*w+x)*4,r=d[i],g=d[i+1],b=d[i+2],mn=r<g?(r<b?r:b):(g<b?g:b),mx=r>g?(r>b?r:b):(g>b?g:b);
     if(mn>=190&&mx-mn<25){if(!run)start=x;run++;continue;}}
-   const L=run;run=0;
+   const runL=run;run=0;
+   if(runL<minL||runL>240)continue;
+   // 흐린 화면(확대·축소·압축)에서는 흰 영역이 테두리보다 몇 px 좁게 잡힘 → 바깥으로 실제 테두리(진한 선)를 찾아 크기를 정함
+   let lb=-1,rb=-1;
+   for(let xx=start-1;xx>start-7;xx--)if(edge(px(xx,y))){lb=xx;break;}
+   for(let xx=start+runL;xx<start+runL+6;xx++)if(edge(px(xx,y))){rb=xx;break;}
+   if(lb<0||rb<0)continue;
+   const bx0=lb+1,L=rb-lb-1;
    if(L<minL||L>240)continue;
-   if(!edge(px(start-1,y))&&!edge(px(start-2,y)))continue;
-   if(!edge(px(start+L,y))&&!edge(px(start+L+1,y)))continue;
    let by=y;
-   while(by<y+L&&Math.max(...px(start+1,by))>=150)by++;
+   while(by<y+L&&Math.max(...px(bx0+2,by))>=150)by++;
    if(by>=y+L)continue;
-   if(!edge(px(start-2,by-L/2))&&!edge(px(start-1,by-L/2)))continue;
    const ty=by-L+1;
    if(ty<0)continue;
-   // 정사각형 테두리 확인: 왼쪽·오른쪽 세로선과 아래 가로선이 위에서 아래까지 진해야 함 (미니맵 등 오인 방지)
+   // 정사각형 테두리 확인 (미니맵 등 오인 방지). 마우스 커서가 한쪽을 가릴 수 있어 한쪽은 60%만 보여도 됨
    let n=0,okL=0,okR=0,okB=0;
-   for(let yy=ty+2;yy<by-1;yy+=2){n++;if(edge(px(start-1,yy))||edge(px(start-2,yy)))okL++;if(edge(px(start+L,yy))||edge(px(start+L+1,yy)))okR++;}
-   let m=0;for(let xx=start+2;xx<start+L-2;xx+=2){m++;if(edge(px(xx,by))||edge(px(xx,by+1)))okB++;}
-   // 마우스 커서가 상자 한쪽 테두리를 가릴 수 있어서 한쪽은 60%만 보여도 됨
+   for(let yy=ty+2;yy<by-1;yy+=2){n++;if(edge(px(lb,yy))||edge(px(lb-1,yy))||edge(px(lb+1,yy)))okL++;if(edge(px(rb,yy))||edge(px(rb+1,yy))||edge(px(rb-1,yy)))okR++;}
+   let m=0;for(let xx=bx0+2;xx<bx0+L-2;xx+=2){m++;if(edge(px(xx,by))||edge(px(xx,by+1))||edge(px(xx,by-1)))okB++;}
    if(okB<m*.9||Math.min(okL,okR)<n*.6||Math.max(okL,okR)<n*.9)continue;
    // 장비 아이콘 상자는 위쪽이 회청색, 아래쪽이 흰색인 그라데이션 (그냥 흰 UI 창은 제외)
-   const S=p=>p[0]+p[1]+p[2],topC=S(px(start+3,ty+L*.08))+S(px(start+L-4,ty+L*.08)),botC=S(px(start+3,by-L*.12))+S(px(start+L-4,by-L*.12));
+   const S=p=>p[0]+p[1]+p[2],topC=S(px(bx0+3,ty+L*.08))+S(px(bx0+L-4,ty+L*.08)),botC=S(px(bx0+3,by-L*.12))+S(px(bx0+L-4,by-L*.12));
    if(topC>botC-120)continue;
    // 가운데에 장비 그림(검은 외곽선)이 있어야 함
    let dk=0,tot=0;
-   for(let yy=ty+L*.3;yy<ty+L*.8;yy+=2)for(let xx=start+L*.25;xx<start+L*.75;xx+=2){tot++;if(Math.max(...px(xx,yy))<90)dk++;}
+   for(let yy=ty+L*.3;yy<ty+L*.8;yy+=2)for(let xx=bx0+L*.25;xx<bx0+L*.75;xx+=2){tot++;if(Math.max(...px(xx,yy))<90)dk++;}
    if(dk<tot*.04)continue;
-   if(boxes.some(b=>Math.abs(b.bx-start)<L*.3&&Math.abs(b.ty-ty)<L*.3))continue;
-   boxes.push({bx:start,ty,L,x:x0+start,y:y0+ty});
+   if(boxes.some(b=>Math.abs(b.bx-bx0)<L*.3&&Math.abs(b.ty-ty)<L*.3))continue;
+   boxes.push({bx:bx0,ty,L,x:x0+bx0,y:y0+ty});
    if(firstOnly)return {boxes,px};
   }
  }
@@ -1221,31 +1230,61 @@ function sockHue([r,g,b]){
  hh*=60;
  return hh<20||hh>=340?'R':hh<45?'O':hh<70?'Y':hh<165?'G':hh<250?'B':hh<300?'P':'M';
 }
-// 실측 평균색 (무손실 → 화면공유 수준): 흰색(무지개) (177,163,219) 연보라·밝음 / 보라 (144,84,169) / 빨강 (156,94,114)
-// 파랑 (70,119,159) / 검정 (77,81,92) 무채색 / 초록은 실측 없음 → 초록이 가장 큰 경우
-function gemColor(r,g,b){
- const mx=Math.max(r,g,b),mn=Math.min(r,g,b),c=mx-mn,sum=r+g+b;
- // 검정: 채도 낮고 어두움 (실측 채도 ≤24, 밝기 합 ≤322). 흰색은 축소·압축되면 채도가 27까지 떨어지지만 밝음(합 ≥384)
- if(c<20||(c<32&&sum<350))return 'gray';
- if(g>=r&&g>=b)return 'green';
- if(r>=b)return 'red';
- // 파랑이 가장 큰 경우: 파랑 보석은 빨강 성분이 초록보다 확실히 작음(R/G ≤ 0.66), 흰색은 R≈G, 보라는 초록이 낮음(G/R ≤ 0.65)
- if(r<g*.82)return 'blue';
- return g/r>=.72?'prismatic':'purple';
+// 보석 색 판정 — 실제 게임 툴팁 18개를 확대·축소(0.6~1.75배)·압축(화질 55~100)한 2,592개 변형에서 잰 값으로 정함
+// 배경 대비 밝기(rel): 흰색 1.06~1.20 / 보라 0.72~0.82 / 빨강 0.67~0.76 / 파랑 0.64~0.76 / 검정 0.51~0.65
+// 초록/빨강 비(g/r): 파랑 1.36~1.64, 검정 1.08~1.17, 보라 0.58~0.75 · 빨강은 R>B (+15~+35)
+function gemColor(r,g,b,bgs){
+ const c=Math.max(r,g,b)-Math.min(r,g,b),rel=bgs?(r+g+b)/bgs:1,gr=g/Math.max(r,1);
+ if(rel>=.9)return 'prismatic';                 // 흰색: 배경보다 밝음
+ if(g>=r&&g>=b&&c>=40)return 'green';
+ if(gr>=1.05)return c>=40?'blue':'gray';        // 파랑: 채도 높음 / 검정: 채도 낮음
+ if(r-b>0)return 'red';
+ if(gr<.9)return 'purple';
+ return 'gray';
 }
-// 보석 찾기 기준을 두 번(보통 70, 민감 40) 써서 더 많이 찾은 쪽을 씀:
-// 화면 공유가 축소되면 밝은 흰색(무지개) 보석이 배경과 비슷해져 기준 70에서는 빠질 수 있음
+const SOCK_TS=[70,55,40];
+// 보석 찾기 기준값 3개로 각각 찾고 위치별로 합침. 기준값끼리 결과(보석 수·색)가 다르거나,
+// 보석 배치가 정상 배치(1개=가운데, 2개=좌우 대칭, 3개=등간격)와 다르면 결과에 unsure=true → '확인 필요(?)'
 function readSockets(px,bx,ty,L){
- const a=readSocketsT(px,bx,ty,L,70),b=readSocketsT(px,bx,ty,L,40);
- return b.length>a.length?b:a;
+ const found=[];
+ for(const T of SOCK_TS)for(const [col,cx] of readSocketsT(px,bx,ty,L,T)){
+  const hit=found.find(f=>Math.abs(cx-f.cx)<L*.08);
+  if(!hit)found.push({col,cx,votes:{[col]:1}});else hit.votes[col]=(hit.votes[col]||0)+1;
+ }
+ found.sort((a,b)=>a.cx-b.cx);
+ let unsure=false;
+ for(const f of found){
+  const n=Object.values(f.votes).reduce((s,v)=>s+v,0);
+  if(n<2||Object.keys(f.votes).length>1)unsure=true;
+  f.col=Object.keys(f.votes).sort((a,b)=>f.votes[b]-f.votes[a]||(b===f.col)-(a===f.col))[0];
+ }
+ if(found.length>3)unsure=true;
+ const cs=found.slice(0,3).map(f=>f.cx/L);
+ if(!cs.length)unsure=true;
+ else if(cs.length===1&&Math.abs(cs[0]-.5)>.09)unsure=true;
+ else if(cs.length===2&&(Math.abs((cs[0]+cs[1])/2-.5)>.09||!(cs[1]-cs[0]>=.29&&cs[1]-cs[0]<=.375)))unsure=true;
+ else if(cs.length===3&&Math.abs((cs[2]-cs[1])-(cs[1]-cs[0]))>.08)unsure=true;
+ const out=found.slice(0,3).map(f=>f.col);
+ out.unsure=unsure;
+ return out;
 }
 function readSocketsT(px,bx,ty,L,T){
- const yA=Math.floor(ty+L*.04),yB=Math.floor(ty+L*.19),yOn=Math.floor(ty+L*.15);
- const bg={};
- for(let y=yA;y<=yB;y++){const s=[];for(let i=2;i<8;i++)s.push(px(bx+i,y));s.sort((a,b)=>a[0]+a[1]+a[2]-b[0]-b[1]-b[2]);bg[y]=s[3];}
+ const yA=Math.floor(ty+L*.04),yB=Math.floor(ty+L*.19),yOn=Math.floor(ty+L*.135);
  const diff=(p,q)=>Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])+Math.abs(p[2]-q[2]);
+ // 배경색: 상자 왼쪽·오른쪽 가장자리 중 더 고른 쪽 (마우스 커서가 한쪽을 가릴 수 있음)
+ const bg={};
+ for(let y=yA;y<=yB;y++){
+  let best=null;
+  for(const seg of [[2,3,4,5,6,7].map(i=>px(bx+i,y)),[2,3,4,5,6,7].map(i=>px(bx+L-1-i,y))]){
+   const ss=seg.slice().sort((a,b)=>a[0]+a[1]+a[2]-b[0]-b[1]-b[2]),med=ss[ss.length>>1];
+   const v=seg.reduce((s,p)=>s+diff(p,med),0);
+   if(!best||v<best[0])best=[v,med];
+  }
+  bg[y]=best[1];
+ }
  const groups=[];let cur=null,gap=0;
- for(let x=Math.floor(bx+L*.06);x<Math.floor(bx+L*.94);x++){
+ // 상자 양 끝 12%는 제외 (보석은 가운데 쪽에만 있음, 가장자리에는 커서가 걸칠 수 있음)
+ for(let x=Math.floor(bx+L*.12);x<Math.floor(bx+L*.88);x++){
   let on=false;
   for(let y=yA;y<yOn;y++)if(diff(px(x,y),bg[y])>T){on=true;break;}
   if(on){if(!cur)cur={a:x,b:x};else cur.b=x;gap=0;}
@@ -1254,22 +1293,24 @@ function readSocketsT(px,bx,ty,L,T){
  if(cur)groups.push(cur);
  const out=[];
  for(const {a,b} of groups){
-  if(b-a<L*.07||b-a>L*.25)continue;
-  // 물방울 모양 확인: 맨 윗줄이 좁아야 함 (장비 그림이 걸린 경우 제외)
+  if(b-a<L*.055||b-a>L*.25)continue;
+  // 물방울 모양 확인: 맨 윗줄이 좁아야 함 (장비 그림이 걸린 경우 제외). 아주 작은 보석은 흐려서 생략
   let top=-1;
   for(let y=yA;y<=yB&&top<0;y++)for(let x=a;x<=b;x++)if(diff(px(x,y),bg[y])>T){top=y;break;}
   if(top<0)continue;
   let wtop=0;for(let x=a;x<=b;x++)if(diff(px(x,top),bg[top])>T)wtop++;
-  if(wtop>(b-a+1)*.6)continue;
-  // 보석 색 = 보석 픽셀(배경과 다른 픽셀)의 평균색. 화면 공유 영상은 색 해상도가 절반(4:2:0)이라
-  // 1~2px 테두리 색은 뭉개지지만, 보석 전체 평균색은 유지됨. 아래쪽은 장비 그림과 겹칠 수 있어 보석 윗부분만 사용
-  const yEnd=Math.min(yB,Math.round(top+L*.12));
-  let sr=0,sg=0,sb=0,cnt=0;
-  for(let y=top;y<=yEnd;y++)for(let x=a;x<=b;x++){const p=px(x,y);if(diff(p,bg[y]||bg[yB])<=(T>=70?60:T))continue;sr+=p[0];sg+=p[1];sb+=p[2];cnt++;}
+  if(b-a+1>=8&&wtop>(b-a+1)*.6)continue;
+  // 보석 색 = 보석 윗부분(장비 그림과 안 겹치는 곳) 픽셀의 평균색 + 배경 대비 밝기
+  const yEnd=Math.min(yB,Math.round(top+L*.12)),thr=T>=70?60:T;
+  let sr=0,sg=0,sb=0,cnt=0,bs=0,bn=0;
+  for(let y=top;y<=yEnd;y++){
+   if(bg[y]){bs+=bg[y][0]+bg[y][1]+bg[y][2];bn++;}
+   for(let x=a;x<=b;x++){const p=px(x,y);if(diff(p,bg[y]||bg[yB])<=thr)continue;sr+=p[0];sg+=p[1];sb+=p[2];cnt++;}
+  }
   if(cnt<6)continue;
-  out.push(gemColor(sr/cnt,sg/cnt,sb/cnt));
+  out.push([gemColor(sr/cnt,sg/cnt,sb/cnt,bn?bs/bn:0),(a+b)/2-bx]);
  }
- return out.slice(0,3);
+ return out;
 }
 // 남김(O) / 분해(X) / 확인 필요(?) 판정
 // 필요 없는 스킬 찾기: 분류된 스킬(id)뿐 아니라 읽은 원문도 직접 확인 (OCR이 분류를 틀려도 잡히게)
@@ -1291,7 +1332,9 @@ function sockOk(g){
  return g.sockets.every(s=>prefs.sockColors.includes(s));
 }
 function judge(g){
- const n=g.options.length,sock=sockOk(g);
+ // 소켓 인식이 확실하지 않으면(기준값끼리 결과가 다르거나 배치가 이상함) 소켓 판정을 하지 않고 '확인 필요'
+ const sockUnsure=!!(g.sockets&&g.sockets.unsure);
+ const n=g.options.length,sock=!sockUnsure&&sockOk(g);
  // 18줄에 필요 없는 스킬(기본: 보스 데미지·데미지·방어율 무시)이 한 줄이라도 있으면 스킬 장비로는 쓸모없음
  const junk=junkOf(g.options.map(o=>o.id),g.options.map(o=>o.name));
  const skill=(prefs.only3?n>=3:n>=1)&&!junk.length;
@@ -1301,6 +1344,7 @@ function judge(g){
  if(skill||sock)return {v:'O',why:why.join(' + '),skill,sock};
  // 둘 다 아님 → 이유
  if(prefs.sockRule&&!g.sockets)return {v:'?',why:n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')+' · 소켓 인식 실패',skill,sock};
+ if(prefs.sockRule&&sockUnsure)return {v:'?',why:n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')+' · 소켓 '+sockText(g.sockets)+'로 보이지만 확실하지 않아요 — 툴팁을 다시 띄우거나 직접 확인',skill,sock};
  const r=[n+'줄'+(junk.length?' (필요 없는 스킬: '+junk.join('·')+')':'')];
  if(prefs.sockRule&&g.sockets){
   if(!jobFitsStat(g.job))r.push(JOB_KO[g.job]+' 장비 ('+STAT_KO[prefs.myStat]+'로 못 씀)');
@@ -1328,9 +1372,16 @@ renderSockPrefs();
 /* ---------- 소켓 최적 조합 ---------- */
 const SOCK_CSS={red:'#e05a5a',gray:'#5b6170',green:'#4fbf6a',purple:'#a56be0',blue:'#4e8fe8',prismatic:'linear-gradient(135deg,#ff8a8a,#ffe08a,#8affa8,#8ad8ff,#c98aff)'};
 const SLOT_ORDER=[0,5,1,3,2,4];
-function sockChips(s){
+// onEdit이 있으면 소켓 칸을 눌러 색을 바꿀 수 있음 (인식이 틀렸을 때 직접 고치기)
+function sockChips(s,onEdit){
  const w=el('span',null,'row');w.style.gap='3px';w.style.display='inline-flex';
- for(const c of s){const b=el('span',SOCK_SHORT[c]||c,'chip');b.title=SOCK_KO[c];b.style.cssText='background:'+SOCK_CSS[c]+';color:'+(c==='prismatic'?'#222':'#fff')+';border-color:transparent;font-weight:700';w.append(b);}
+ s.forEach((c,i)=>{
+  const b=el(onEdit?'button':'span',SOCK_SHORT[c]||c,'chip');
+  b.title=SOCK_KO[c]+(onEdit?' · 눌러서 색 바꾸기':'');
+  b.style.cssText='background:'+SOCK_CSS[c]+';color:'+(c==='prismatic'?'#222':'#fff')+';border-color:transparent;font-weight:700'+(onEdit?';cursor:pointer;padding:1px 7px;font-size:11.5px':'');
+  if(onEdit){b.type='button';b.setAttribute('aria-label',(i+1)+'번째 소켓 '+SOCK_KO[c]+', 눌러서 다음 색으로');b.onclick=()=>{const next=s.slice();next[i]=SOCK_ALL[(SOCK_ALL.indexOf(c)+1)%SOCK_ALL.length];onEdit(next);};}
+  w.append(b);
+ });
  return w;
 }
 const sockValid=s=>s.sockets.length===3&&s.sockets.every(c=>prefs.sockColors.includes(c))&&jobFitsStat(s.job);
@@ -1384,8 +1435,22 @@ function renderSockets(){
  const res=$('sockResult');res.replaceChildren();
  const fullSet=best.filled===6&&best.prismItems===4&&!best.extra;
  const head=el('div',null,'row spread');
- head.append(el('strong',fullSet?'목표 조합 완성!':'현재 가능한 최선 조합 · '+best.filled+'/6부위'),el('span','흰색 포함 '+best.prismItems+'/4부위 · 색 분포 '+prefs.sockColors.filter(c=>c!=='prismatic').map(c=>SOCK_SHORT[c]+(best.cnt[c]||0)).join(' '),'muted compact'));
+ head.append(el('strong',fullSet?'목표 조합 완성!':'현재 가능한 최선 조합 · '+best.filled+'/6부위'),el('span','흰색 포함 '+best.prismItems+'/4부위','muted compact'));
  res.append(head);
+ // 보석 요약: 최적 조합에 들어간 소켓을 색별로 센다 (6부위 × 3 = 최대 18개)
+ const gems={};let gemTotal=0;
+ for(const p of best.pick)if(p)for(const c of p.s.sockets){gems[c]=(gems[c]||0)+1;gemTotal++;}
+ const sum=el('div',null,'gem-summary');
+ const order=['prismatic',...prefs.sockColors.filter(c=>c!=='prismatic'),...SOCK_ALL.filter(c=>c!=='prismatic'&&!prefs.sockColors.includes(c))];
+ for(const c of order){
+  if(!gems[c]&&!prefs.sockColors.includes(c))continue;
+  const box=el('div',null,'gem-stat');
+  const dot=el('span',null,'gem-dot');dot.style.background=SOCK_CSS[c];
+  box.append(dot,el('span',c==='prismatic'?'프리즘(흰색)':SOCK_KO[c]),el('b',String(gems[c]||0)+'개'));
+  sum.append(box);
+ }
+ sum.append(el('div','보석 '+gemTotal+' / 18개 세팅 가능','gem-total'));
+ res.append(sum);
  const chosenIds=new Set();
  let prismLeft=4-best.prismItems;
  for(const i of SLOT_ORDER){
@@ -1408,7 +1473,8 @@ function renderSockets(){
   const g=el('div',null,'inventory-group');g.append(el('h3',slots[i]+' · '+items.length+'개'));
   for(const s of items){
    const row=el('div',null,'entry row spread'),l=el('div',null,'row');
-   l.append(sockChips(s.sockets),el('span',(chosenIds.has(s.id)?'★ 조합에 사용':sockValid(s)?'예비':'✕ 조건 안 맞음')+(s.job?' · '+JOB_KO[s.job]:' · 직업 미확인')+(s.fromGear?' · 보유 장비('+s.lines+'줄)':''),'muted compact'));
+   const editSock=next=>{const t=s.fromGear?state.gear.find(x=>x.id===s.id):state.sock.find(x=>x.id===s.id);if(t){t.sockets=next;refresh();}};
+   l.append(sockChips(s.sockets,editSock),el('span',(chosenIds.has(s.id)?'★ 조합에 사용':sockValid(s)?'예비':'✕ 조건 안 맞음')+(s.job?' · '+JOB_KO[s.job]:' · 직업 미확인')+(s.fromGear?' · 보유 장비('+s.lines+'줄)':''),'muted compact'));
    // 보유 장비에서 온 것은 스킬 장비이기도 하므로 여기서 지우지 않고, 직업만 고칠 수 있게
    if(s.fromGear){
     const sel=el('select');sel.append(...[['','직업 미확인'],...Object.entries(JOB_KO)].map(([v,t])=>{const o=el('option',t);o.value=v;return o;}));
