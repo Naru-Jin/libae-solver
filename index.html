@@ -273,7 +273,7 @@ const defaultGoal = {leap:3,white:3,registry:3,atk:3,...jobs,crit:1};
 const $ = id => document.getElementById(id);
 const key = 'quanah-libae-ko-v1';
 const uid = () => globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)+Date.now().toString(36);
-let state = {gear:[],custom:[],goal:defaultGoal,active:'',sock:[]};
+let state = {gear:[],custom:[],goal:defaultGoal,active:'',sock:[],sockLock:{}};
 let capturedNames=[];
 let slot=0, selected=[], editing=null, editingPreset=null, run=0;
 function cleanGoal(value) {
@@ -293,7 +293,10 @@ function cleanState(data) {
  const okColor=/^(red|gray|green|purple|blue|prismatic)$/;
  const sock=(Array.isArray(data.sock)?data.sock:[]).filter(s=>Number.isInteger(s?.slot)&&slots[s.slot]&&Array.isArray(s.sockets)&&s.sockets.length===3&&s.sockets.every(c=>okColor.test(c)))
   .map(s=>({id:uid(),slot:s.slot,sockets:s.sockets.slice(),job:typeof s.job==='string'?s.job:null,name:String(s.name||'').slice(0,80)}));
- return {gear,custom,active,goal:cleanGoal(data.goal),sock};
+ // 소켓 고정: 부위 번호 → 고정한 소켓 색 조합 (이미 끼운 장비라 바꿀 수 없는 부위)
+ const sockLock={};
+ if(data.sockLock&&typeof data.sockLock==='object')for(const [k,v] of Object.entries(data.sockLock))if(slots[+k]&&typeof v==='string'&&v.split(',').length===3&&v.split(',').every(c=>okColor.test(c)))sockLock[+k]=v;
+ return {gear,custom,active,goal:cleanGoal(data.goal),sock,sockLock};
 }
 try{const stored=localStorage.getItem(key);if(stored)state=cleanState(JSON.parse(stored));}catch(e){$('notice').textContent='저장 데이터를 읽지 못했습니다. 백업 파일이 있다면 불러오세요.';}
 function persist(){try{localStorage.setItem(key,JSON.stringify(state));}catch(e){$('notice').textContent='브라우저 저장을 사용할 수 없습니다. 백업을 내보내세요.';}window.queueAutoBackup?.();}
@@ -1601,14 +1604,17 @@ function solveSockets(){
  const bySlot=slots.map((_,slot)=>{
   const uniq=new Map();
   for(const s of valid.filter(s=>s.slot===slot)){const k=sockSig(s.sockets);if(!uniq.has(k))uniq.set(k,s);}
-  return [...uniq.values()].map(s=>({s,...sockLocal(s)}));
+  const opts=[...uniq.values()].map(s=>({s,...sockLocal(s)}));
+  const lk=state.sockLock?.[slot];
+  if(lk){const f=opts.filter(o=>sockSig(o.s.sockets)===lk);if(f.length){f.locked=true;return f;}}
+  return opts;
  });
  // 부위별로 차례로 고르며 '흰색 장비 수 + 색별 개수'가 같은 경우 중 가장 좋은 것만 남김 → 모든 조합을 본 것과 같은 결과를 빠르게
  const COLS=SOCK_ALL.filter(c=>c!=='prismatic');
  let states=new Map([['0|'+COLS.map(()=>0).join(','),{filled:0,prism:0,wasted:0,distinct:0,cnt:{},pick:Array(6).fill(null)}]]);
  for(let i=0;i<6;i++){
   const next=new Map();
-  for(const st of states.values())for(const opt of [null,...bySlot[i]]){
+  for(const st of states.values())for(const opt of (bySlot[i].locked?bySlot[i]:[null,...bySlot[i]])){
    const cnt={...st.cnt};
    if(opt)for(const c of opt.rest)cnt[c]=(cnt[c]||0)+1;
    const n={filled:st.filled+(opt?1:0),prism:st.prism+(opt?opt.prism:0),wasted:st.wasted+(opt?opt.wasted:0),distinct:st.distinct+(opt?opt.distinct:0),cnt,pick:st.pick.slice()};
@@ -1670,7 +1676,7 @@ function renderSockets(){
  for(const i of SLOT_ORDER){
   const p=best.pick[i],row=el('div',null,'entry row spread');
   const left=el('div',null,'row');left.append(el('strong',slots[i]));
-  if(p){chosenIds.add(p.s.id);left.append(sockChips(p.s.sockets));if(p.wasted)left.append(el('span','흰색 '+(p.wasted+1)+'개 (1개만 유효)','muted compact'));}
+  if(p){chosenIds.add(p.s.id);left.append(sockChips(p.s.sockets));if(state.sockLock?.[i]===sockSig(p.s.sockets)){const t=el('span','📌 고정','compact');t.style.fontWeight='700';t.style.color='var(--accent)';left.append(t);}if(p.wasted)left.append(el('span','흰색 '+(p.wasted+1)+'개 (1개만 유효)','muted compact'));}
   else{
    const need=prismLeft>0?'흰색 + 2색 (예: 흰'+prefs.sockColors.filter(c=>c!=='prismatic').slice(0,2).map(c=>SOCK_SHORT[c]).join('')+')':'3색 (예: '+prefs.sockColors.filter(c=>c!=='prismatic').slice(0,3).map(c=>SOCK_SHORT[c]).join('')+')';
    if(prismLeft>0)prismLeft--;
@@ -1688,6 +1694,10 @@ function renderSockets(){
   const g=el('div',null,'inventory-group');g.append(el('h3',slots[i]+' · '+items.length+'개'));
   for(const s of items){
    const row=el('div',null,'entry row spread'),l=el('div',null,'row');
+   const locked=state.sockLock?.[i]===sockSig(s.sockets);
+   const lockBtn=button(locked?'📌 고정 풀기':'고정',()=>{state.sockLock=state.sockLock||{};if(locked)delete state.sockLock[i];else state.sockLock[i]=sockSig(s.sockets);refresh();});
+   lockBtn.title=locked?'고정을 풀면 이 부위도 다시 최적 조합에서 골라요.':'이미 끼워서 바꿀 수 없는 장비면 고정하세요. 이 부위는 이 장비로 두고 나머지 부위만 고르게 맞춰요.';
+   if(locked){lockBtn.style.color='var(--accent)';lockBtn.style.fontWeight='700';}
    const editSock=next=>{const t=s.fromGear?state.gear.find(x=>x.id===s.id):state.sock.find(x=>x.id===s.id);if(t){t.sockets=next;refresh();}};
    l.append(sockChips(s.sockets,editSock),el('span',(chosenIds.has(s.id)?'★ 조합에 사용':sockValid(s)?'예비':'✕ 조건 안 맞음')+(s.job?' · '+JOB_KO[s.job]:' · 직업 미확인')+(s.fromGear?' · 보유 장비('+s.lines+'줄)':''),'muted compact'));
    // 보유 장비에서 온 것은 스킬 장비이기도 하므로 장비 자체는 지우지 않고, 직업 고치기·소켓 빼기만
@@ -1697,9 +1707,9 @@ function renderSockets(){
     // 소켓 빼기: 소켓 정보만 지우고 스킬 장비(18줄 계산용)는 보유 장비에 그대로 둠
     const rm=button('소켓 빼기',()=>{const g0=state.gear.find(x=>x.id===s.id);if(g0){g0.sockets=null;g0.noSock=true;refresh();}});
     rm.title='소켓 목록에서만 빼요. 스킬 장비는 보유 장비에 그대로 남아요.';
-    const act=el('div',null,'row');act.append(sel,rm);
+    const act=el('div',null,'row');act.append(lockBtn,sel,rm);
     row.append(l,act);
-   }else row.append(l,button('삭제',()=>{state.sock=state.sock.filter(x=>x.id!==s.id);refresh();}));
+   }else{const act=el('div',null,'row');act.append(lockBtn,button('삭제',()=>{state.sock=state.sock.filter(x=>x.id!==s.id);refresh();}));row.append(l,act);}
    g.append(row);
   }
   list.append(g);
