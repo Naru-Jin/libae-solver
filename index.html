@@ -134,6 +134,10 @@ section[data-fold].folded>:first-child h2,section[data-fold].folded>h2{margin-bo
 .fold-btn{margin-left:auto;font-size:12px;padding:4px 10px;color:var(--muted);font-weight:600;white-space:nowrap}
 .fold-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fold-head h2{margin-bottom:0}
+#celebrate{position:fixed;left:50%;top:18px;transform:translate(-50%,-140%);z-index:50;display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 26px;background:var(--accent);color:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(120,50,10,.35);transition:transform .35s cubic-bezier(.2,.9,.3,1.2);cursor:pointer;text-align:center}
+#celebrate.show{transform:translate(-50%,0)}
+#celebrate strong{font-size:20px;letter-spacing:-.02em}#celebrate span{font-size:13px;opacity:.9}
+@media(prefers-reduced-motion:reduce){#celebrate{transition:none}}
 .gem-summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fbf8f2}
 .gem-stat{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#fff;border:1px solid var(--line);border-radius:6px;font-size:13px}
 .gem-stat b{font-size:15px;margin-left:2px}
@@ -181,7 +185,7 @@ section[data-fold].folded>:first-child h2,section[data-fold].folded>h2{margin-bo
 <p class="compact muted" style="margin:8px 0 0">이 페이지를 클릭한 상태에서 <kbd>F2</kbd> = 한 번 캡처, <kbd>F3</kbd> = 방금 추가한 장비 취소. 스크린샷을 붙여넣어도 돼요.</p>
 <details class="settings"><summary>스캔 설정</summary>
 <div class="row compact" style="margin-top:8px"><label>부위를 못 읽으면 <select id="slotFallback"><option value="entry">장비 등록란에서 고른 부위로 추가</option><option value="ask">추가하지 말고 직접 고르기</option></select></label></div>
-<div class="row compact"><label><input type="checkbox" id="only3"> 스킬 장비는 3줄만 추가 (1~2줄이어도 소켓 3개가 맞으면 소켓 장비로 남김)</label><label><input type="checkbox" id="skipDup"> 이미 등록된 같은 장비는 건너뛰기</label><label><input type="checkbox" id="sound"> 소리 알림</label><label>볼륨 <input type="range" id="volume" min="0" max="100" step="5" style="width:110px;padding:0;vertical-align:middle"> <span id="volumeText"></span></label><button type="button" id="testOk">딩동 듣기</button><button type="button" id="testBad">삐삐 듣기</button></div>
+<div class="row compact"><label><input type="checkbox" id="only3"> 스킬 장비는 3줄만 추가 (1~2줄이어도 소켓 3개가 맞으면 소켓 장비로 남김)</label><label><input type="checkbox" id="skipDup"> 이미 등록된 같은 장비는 건너뛰기</label><label><input type="checkbox" id="sound"> 소리 알림</label><label>볼륨 <input type="range" id="volume" min="0" max="100" step="5" style="width:110px;padding:0;vertical-align:middle"> <span id="volumeText"></span></label><button type="button" id="testOk">딩동 듣기</button><button type="button" id="testBad">삐삐 듣기</button><button type="button" id="testFanfare">빵빠레 듣기</button></div>
 <div class="row compact"><span class="muted">이 스킬이 하나라도 있으면 스킬 장비로 안 씀 (소켓 장비 판정은 그대로):</span><span id="junkSkills" class="row" style="gap:8px"></span></div>
 <div class="row compact"><label><input type="checkbox" id="sockRule"> 소켓 조건 사용</label><span class="muted">소켓 3개가 모두 이 색이면 남김:</span><span id="sockColors"></span></div>
 </details>
@@ -479,6 +483,7 @@ function displayResult(result,goal){
  chosenIds=new Set(result.items.filter(Boolean).map(gear=>gear.id));
  $('pruneGear').disabled=!chosenIds.size||!state.gear.some(gear=>!chosenIds.has(gear.id));
  const out=$('result'),total=Object.values(goal).reduce((a,b)=>a+b,0),missing=6-result.items.filter(Boolean).length;
+ if(typeof markComplete==='function')markComplete('lines',result.score===total);
  out.replaceChildren();
  const summary=el('div',null,'row spread');summary.append(el('span',result.score+' / '+total+'줄','metric'),el('strong','합계 '+result.stars+'★'));
  const bar=el('progress');bar.max=total;bar.value=result.score;bar.setAttribute('aria-label','목표 달성률');
@@ -1061,10 +1066,33 @@ function beep(kind){
    o.connect(g);o2.connect(g);g.connect(beep.out);o.start(t);o2.start(t);o.stop(t+len+.02);o2.stop(t+len+.02);
   };
   const t=a.currentTime+.01;
+  if(kind==='fanfare'){
+   // 빵빠레: 짧은 3연음 → 상승 → 마지막 화음 길게 (도-도-도-도~ 솔 라 도~)
+   const C5=523.25,E5=659.25,G5=783.99,A5=880,C6=1046.5,E6=1318.5;
+   [[C5,0,.13],[C5,.15,.13],[C5,.30,.13],[C5,.45,.42],[G5,.90,.2],[A5,1.12,.2],[C6,1.34,.9]].forEach(([f,dt,len])=>note(f,t+dt,len,'square',.42));
+   [[E6,1.34],[G5,1.34],[E5,1.34]].forEach(([f,dt])=>note(f,t+dt,.9,'triangle',.35));
+   return;
+  }
   if(kind==='ok'){note(1319,t,.45,'triangle',1);note(1047,t+.22,.6,'triangle',1);}        // 딩~동
   else if(kind==='bad'){note(2200,t,.12,'square',.55);note(2200,t+.18,.12,'square',.55);}  // 삐삐
   else note(880,t,.25,'triangle',.6);                                                       // 띵
  }catch(e){}
+}
+// 완성 축하: 18줄 / 소켓 조합이 '미완성 → 완성'으로 바뀌는 순간에만 빵빠레 + 화면 알림 (페이지 열 때·다시 계산할 때는 안 울림)
+const completeState={};
+function markComplete(kind,done){
+ const prev=completeState[kind];completeState[kind]=done;
+ if(prev===undefined||!done||prev)return;
+ beep('fanfare');
+ showCelebrate(kind==='lines'?'🎉 18줄 완성!':'🎉 소켓 조합 완성!',kind==='lines'?'최적 조합 카드에서 장비 구성을 확인하세요.':'흰색 4부위 + 6부위 소켓이 모두 맞춰졌어요.');
+}
+function showCelebrate(title,sub){
+ let box=document.getElementById('celebrate');
+ if(!box){box=document.createElement('div');box.id='celebrate';box.setAttribute('role','status');document.body.append(box);}
+ box.replaceChildren(el('strong',title),el('span',sub));
+ box.classList.add('show');clearTimeout(showCelebrate.t);
+ showCelebrate.t=setTimeout(()=>box.classList.remove('show'),5000);
+ box.onclick=()=>box.classList.remove('show');
 }
 const logColors={ok:'#1f7a45',dup:'#746d61',bad:'#b4322a'};
 let logAdded=0,logTotal=0;
@@ -1202,6 +1230,9 @@ $('volume').oninput=()=>{prefs.volume=+$('volume').value;$('volumeText').textCon
 $('volume').onchange=()=>{const s=prefs.sound;prefs.sound=true;beep('ok');prefs.sound=s;};
 $('testOk').onclick=()=>{const s=prefs.sound;prefs.sound=true;beep('ok');prefs.sound=s;};
 $('testBad').onclick=()=>{const s=prefs.sound;prefs.sound=true;beep('bad');prefs.sound=s;};
+$('testFanfare').onclick=()=>{const s=prefs.sound;prefs.sound=true;beep('fanfare');prefs.sound=s;showCelebrate('🎉 18줄 완성!','완성되면 이렇게 알려줘요 (미리 듣기)');};
+// 지금 상태를 '이미 완성됨/아직'으로 먼저 기록 → 이후 완성되는 순간에만 빵빠레
+setTimeout(()=>{try{calculate();}catch(e){}},0);
 
 /* ---------- 소켓 색 판정 ---------- */
 const SOCK_KO={red:'빨강',gray:'검정',green:'초록',purple:'보라',blue:'파랑',prismatic:'흰색(무지개)'};
@@ -1535,6 +1566,7 @@ function renderSockets(){
  $('sockTotal').textContent='('+all.length+')';
  const res=$('sockResult');res.replaceChildren();
  const fullSet=best.filled===6&&best.prismItems===4&&!best.extra;
+ markComplete('sock',fullSet);
  const head=el('div',null,'row spread');
  head.append(el('strong',fullSet?'목표 조합 완성!':'현재 가능한 최선 조합 · '+best.filled+'/6부위'),el('span','흰색 포함 '+best.prismItems+'/4부위','muted compact'));
  res.append(head);
