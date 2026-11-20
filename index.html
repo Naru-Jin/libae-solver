@@ -529,6 +529,23 @@ function displayResult(result,goal){
    const head=el('div',null,'row spread');
    head.append(el('strong','다음 3줄 장비 1개로 완성될 경우의 수'),el('span',odds.n+' / '+odds.total.toLocaleString()+'가지 · '+(p*100).toFixed(2)+'%','odds-num'));
    box.append(head);
+   // 장비가 바뀌었을 때 경우의 수가 어떻게 변했는지 (계산은 매번 새로 함 — 숫자가 같으면 방금 장비가 길을 늘리지 못한 것)
+   let prev=null;try{prev=JSON.parse(localStorage.getItem('quanah-odds-last')||'null');}catch(e){}
+   const cnt=state.gear.length;
+   if(prev&&prev.gear!==cnt){
+    const dn=odds.n-prev.n;
+    const ch=el('p',null,'compact');ch.style.margin='2px 0 4px';
+    ch.textContent='장비 '+prev.gear+'개 → '+cnt+'개: '+(dn>0?'경우의 수 '+prev.n+' → '+odds.n+' (+'+dn+') 늘었어요':dn<0?'경우의 수 '+prev.n+' → '+odds.n+' ('+dn+')':'경우의 수 그대로 ('+odds.n+') · 최근 장비는 18줄로 가는 새 조합을 만들지 못했어요');
+    ch.style.color=dn>0?'var(--ok)':'var(--muted)';ch.style.fontWeight=dn>0?'700':'400';
+    box.append(ch);
+   }
+   if(!prev||prev.gear!==cnt){try{localStorage.setItem('quanah-odds-last',JSON.stringify({gear:cnt,n:odds.n,prevGear:prev?.gear,prevN:prev?.n}));}catch(e){}}
+   else if(prev.prevGear!=null&&prev.prevGear!==cnt){
+    // 같은 장비 수로 다시 그릴 때도 직전 변화 내용을 계속 보여줌
+    const dn=odds.n-prev.prevN,ch=el('p',null,'compact');ch.style.margin='2px 0 4px';ch.style.color=dn>0?'var(--ok)':'var(--muted)';
+    ch.textContent='장비 '+prev.prevGear+'개 → '+cnt+'개: '+(dn>0?'경우의 수 '+prev.prevN+' → '+odds.n+' (+'+dn+')':dn<0?'경우의 수 '+prev.prevN+' → '+odds.n+' ('+dn+')':'경우의 수 그대로 ('+odds.n+') · 최근 장비는 18줄로 가는 새 조합을 만들지 못했어요');
+    box.append(ch);
+   }
    if(odds.n){
     const exp=Math.round(1/p),p30=1-Math.pow(1-p,30);
     box.append(el('p','평균 3줄 장비 약 '+exp+'개에 한 번 · 30개 더 모으면 적어도 '+Math.round(p30*100)+'% (모을수록 경우의 수가 늘어서 실제로는 더 빨라요)','compact muted'));
