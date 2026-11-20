@@ -1090,11 +1090,13 @@ function addScanned(gear){
  // 스킬 장비(3줄) → 보유 장비 목록
  // 중복 기준: 스킬 장비 = 같은 부위 + 같은 스킬 줄 (소켓 인식 결과는 프레임마다 흔들릴 수 있어 비교하지 않음)
  //           소켓 장비 = 같은 부위 + 같은 소켓 색 조합 (순서 무관)
- let filled=false;
+ let filled=false,dupWith='';
  if(j.skill){
   const same=prefs.skipDup&&state.gear.find(g=>gearKey(g)===gearKey(gear));
   if(same){
    dups.push('스킬');
+   // 어떤 장비와 같은지 보여줌 (스킬 순서는 달라도 같은 3줄이면 18줄 계산에서 똑같은 장비)
+   dupWith='같은 스킬 조합이 이미 있음 → '+slots[same.slot]+': '+same.lines.map(l=>labels[l]).join('·')+(same.sockets&&same.sockets.length?' (소켓 '+sockText(same.sockets)+')':'');
    // 예전에 소켓 없이 저장된 장비면 이번에 읽은 소켓·직업 정보를 채워 넣는다
    if((!same.sockets||same.sockets.length!==3)&&gear.sockets?.length===3){same.sockets=gear.sockets.slice(0,3);filled=true;}
    if(!same.job&&gear.job){same.job=gear.job;filled=true;}
@@ -1111,7 +1113,7 @@ function addScanned(gear){
  }
  const kind=added.length?(j.v==='O'?'ok':'dup'):'dup';
  const tag=j.v==='?'?'? 확인 필요 · 추가 안 함 ['+j.why+']':j.v+' 남김 ['+j.why+']';
- const what=added.length?' · '+added.join('·')+' 장비로 추가':dups.length?' · 이미 목록에 있음 (건너뜀'+(filled?', 소켓 정보 보완':'')+')':'';
+ const what=added.length?' · '+added.join('·')+' 장비로 추가':dups.length?' · 이미 목록에 있음 (건너뜀'+(filled?', 소켓 정보 보완':'')+(dupWith?' · '+dupWith:'')+')':'';
  beep(kind);logScan(kind,tag+what+' · '+d+where);markCell(gear.cell,j.v,d);
  return {kind,msg:tag+what+' · '+d+where+(added.length?' · F3으로 취소':'')};
 }
